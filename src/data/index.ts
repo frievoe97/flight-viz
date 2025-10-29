@@ -30,7 +30,7 @@ export type Flight = {
   speedKtsStats: Stats
   speedMphStats: Stats
   verticalRateStats: Stats
-  meta: unknown
+  meta: Record<string, unknown> | null
   points: Point[]
 }
 
@@ -167,29 +167,42 @@ function parseEuDateTime(token: string | null | undefined) {
 
 function normalizeMeta(metaRaw: unknown) {
   if (!metaRaw || typeof metaRaw !== 'object') return null
+  const m = metaRaw as Record<string, unknown>
   const toNum = (v: unknown) => toNumber(v)
-  const bboxRaw = metaRaw.bbox ?? null
+  const bboxRaw = m['bbox'] as Record<string, unknown> | null
   const bbox = bboxRaw
     ? {
-        minLat: toNum(bboxRaw.min_lat),
-        minLon: toNum(bboxRaw.min_lon),
-        maxLat: toNum(bboxRaw.max_lat),
-        maxLon: toNum(bboxRaw.max_lon),
+        minLat: toNum(bboxRaw?.min_lat),
+        minLon: toNum(bboxRaw?.min_lon),
+        maxLat: toNum(bboxRaw?.max_lat),
+        maxLon: toNum(bboxRaw?.max_lon),
       }
     : null
   return {
-    startTimeBerlin: metaRaw.start_time_berlin ?? null,
-    endTimeBerlin: metaRaw.end_time_berlin ?? null,
-    durationSeconds: toNum(metaRaw.duration_seconds),
-    trackLengthKm: toNum(metaRaw.track_length_km),
+    startTimeBerlin: (m['start_time_berlin'] as string) ?? null,
+    endTimeBerlin: (m['end_time_berlin'] as string) ?? null,
+    durationSeconds: toNum(m['duration_seconds']),
+    trackLengthKm: toNum(m['track_length_km']),
     bbox,
-    points: metaRaw.points ? Number.parseInt(metaRaw.points, 10) : null,
-    speedKts: { min: toNum(metaRaw.speed_kts_min), max: toNum(metaRaw.speed_kts_max), avg: toNum(metaRaw.speed_kts_avg) },
-    speedMph: { min: toNum(metaRaw.speed_mph_min), max: toNum(metaRaw.speed_mph_max), avg: toNum(metaRaw.speed_mph_avg) },
-    altitudeFt: { min: toNum(metaRaw.altitude_ft_min), max: toNum(metaRaw.altitude_ft_max), avg: toNum(metaRaw.altitude_ft_avg) },
-    verticalRateFpm: { min: toNum(metaRaw.vertical_rate_fpm_min), max: toNum(metaRaw.vertical_rate_fpm_max), avg: toNum(metaRaw.vertical_rate_fpm_avg) },
+    points:
+      typeof m['points'] === 'number'
+        ? (m['points'] as number)
+        : typeof m['points'] === 'string'
+        ? Number.parseInt(m['points'] as string, 10)
+        : null,
+    speedKts: { min: toNum(m['speed_kts_min']), max: toNum(m['speed_kts_max']), avg: toNum(m['speed_kts_avg']) },
+    speedMph: { min: toNum(m['speed_mph_min']), max: toNum(m['speed_mph_max']), avg: toNum(m['speed_mph_avg']) },
+    altitudeFt: { min: toNum(m['altitude_ft_min']), max: toNum(m['altitude_ft_max']), avg: toNum(m['altitude_ft_avg']) },
+    verticalRateFpm: { min: toNum(m['vertical_rate_fpm_min']), max: toNum(m['vertical_rate_fpm_max']), avg: toNum(m['vertical_rate_fpm_avg']) },
   }
 }
+
+type LineStringFeature = {
+  type: 'Feature'
+  geometry: { type: 'LineString'; coordinates: unknown[] }
+  properties?: Record<string, unknown>
+}
+type FeatureCollection = { type: 'FeatureCollection'; features?: unknown[] }
 
 function buildFlight(path: string, geojsonSource: string, metaModules: Record<string, unknown>) {
   let geojson: unknown
@@ -207,22 +220,29 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
   const metaRaw = metaModules[metaKey]
   const normalizedMeta = normalizeMeta(metaRaw)
 
-  let feature: unknown = null
-  const g: any = geojson as any
-  if (g?.type === 'FeatureCollection') {
-    const feats: unknown[] = Array.isArray(g.features) ? g.features : []
-    feature = (feats.find((candidate: unknown) => (candidate as any)?.geometry?.type === 'LineString') as unknown) ?? null
-  } else if (g?.type === 'Feature' && g.geometry?.type === 'LineString') {
-    feature = g
+  let feature: LineStringFeature | null = null
+  const g = geojson as FeatureCollection | LineStringFeature
+  if ((g as FeatureCollection)?.type === 'FeatureCollection') {
+    const feats = Array.isArray((g as FeatureCollection).features)
+      ? ((g as FeatureCollection).features as unknown[])
+      : []
+    const found = feats.find((candidate) =>
+      (candidate as LineStringFeature)?.geometry?.type === 'LineString'
+    )
+    feature = found ? (found as LineStringFeature) : null
+  } else if ((g as LineStringFeature)?.type === 'Feature' && (g as LineStringFeature).geometry?.type === 'LineString') {
+    feature = g as LineStringFeature
   }
   if (!feature) return null
 
-  const f: any = feature as any
-  const coordinates: unknown[] = Array.isArray(f.geometry?.coordinates) ? f.geometry.coordinates : []
+  const coordinates: unknown[] = Array.isArray(feature.geometry?.coordinates)
+    ? (feature.geometry.coordinates as unknown[])
+    : []
   if (coordinates.length < 2) return null
 
-  const properties: any = f.properties ?? {}
-  const propArray = (key: string) => (Array.isArray(properties[key]) ? (properties[key] as unknown[]) : [])
+  const properties: Record<string, unknown> = feature.properties ?? {}
+  const propArray = (key: string) =>
+    Array.isArray(properties[key]) ? (properties[key] as unknown[]) : []
 
   const altitudeArray = propArray('altitude_ft')
   const speedKtsArray = propArray('speed_kts')
@@ -239,9 +259,9 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
 
   const points: Point[] = []
   for (let i = 0; i < coordinates.length; i += 1) {
-    const coord: any = coordinates[i] as any
-    const lon = Number(coord?.[0])
-    const lat = Number(coord?.[1])
+    const coord = coordinates[i] as number[]
+    const lon = Number((coord as number[])?.[0])
+    const lat = Number((coord as number[])?.[1])
     if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue
 
     const altitudeFeet = toNumber(altitudeArray[i])
@@ -395,7 +415,16 @@ export async function getFlightData(): Promise<FlightData> {
       const speedMax = Number.isFinite(flight.speedKtsStats.max as number) ? (flight.speedKtsStats.max as number) : 0
       totals.maxSpeedKts = Math.max(totals.maxSpeedKts, speedMax)
 
-      const weight = (flight.meta?.points as number | null) ?? flight.pointCount ?? segments.length + 1
+      const metaPointsUnknown = flight.meta ? (flight.meta as Record<string, unknown>)['points'] : null
+      const metaPointsNum =
+        typeof metaPointsUnknown === 'number'
+          ? metaPointsUnknown
+          : typeof metaPointsUnknown === 'string'
+          ? Number.parseInt(metaPointsUnknown, 10)
+          : null
+      const weight = Number.isFinite(metaPointsNum as number)
+        ? (metaPointsNum as number)
+        : flight.pointCount ?? segments.length + 1
       if (Number.isFinite(flight.speedKtsStats.avg as number)) {
         totals.speedKtsWeightedSum += (flight.speedKtsStats.avg as number) * weight
         totals.speedWeight += weight

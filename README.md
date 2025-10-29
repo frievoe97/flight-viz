@@ -1,73 +1,73 @@
-# React + TypeScript + Vite
+# Flight Viz – React + Tailwind + DeckGL
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ein Dashboard zur Visualisierung von Flugdaten mit React, Tailwind CSS, DeckGL und MapLibre. Enthält ein Vollbild-Layout, Seiten-Routing, eine Kartenansicht (2D) und ein Overlay zum Seitenwechsel.
 
-Currently, two official plugins are available:
+## Inhalt
+- Projektbeschreibung
+- Technologie-Stack
+- Setup & Installation
+- Projektstruktur
+- Styling & Theme
+- Datenzugriff
+- Entwicklungsrichtlinien
+- Deployment
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Projektbeschreibung
+Flight Viz zeigt mehrere Seiten (Dashboard, Map, Flights, Analytics). Die Map-Seite rendert Flugrouten mit DeckGL über einer MapLibre-Basiskarte und stellt Statistiken sowie ein Liniendiagramm zur Verfügung.
 
-## React Compiler
+## Technologie-Stack
+- React + TypeScript + Vite
+- Tailwind CSS (v4) mit CSS-Variablen
+- React Router
+- DeckGL + MapLibre (Basemap: CARTO Dark Matter, 2D)
+- ESLint + Prettier
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Setup & Installation
+```
+git clone <REPO_URL>
+cd flight_viz
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Projektstruktur
 ```
+src/
+  app/
+    components/      # Header, FullscreenLayout, Overlay, etc.
+    routes/          # Seiten (dashboard, map, flights, analytics)
+    styles/          # Theme-Variablen, globale Styles
+  data/              # Loader, Raw-Daten (src/data/raw)
+  lib/               # Utilitys (map config, helpers)
+  assets/            # Bilder/Icons (optional)
+  App.tsx            # Router + Layout
+  main.tsx           # Einstiegspunkt
+```
+
+## Styling & Theme
+- Zentrale Design-Tokens unter `src/app/styles/theme.css` als CSS-Variablen:
+  - `--map-water`, `--map-land`, `--panel-border`, `--panel-bg`, `--chart-axis`, `--flight-*`
+- Tailwind-Klassen nutzen diese Variablen via Arbitrary Values oder thematische Utilities:
+  - Klassen `.panel`, `.card`, `.controls-btn` kapseln häufige UI-Muster und Farben.
+- Dark-Mode ist über `.dark`-Klasse erweiterbar.
+
+## Datenzugriff
+- Statische Flugdaten werden aus `src/data/raw/**` geladen (GeoJSON + optionale `.meta.json`).
+- Zentraler Loader: `src/data/index.ts` – liefert `flights`, `flightSegments`, `aggregatedStats`, `INITIAL_VIEW_STATE`.
+
+Beispiel:
+```ts
+import { getFlightData } from '@/data'
+const { flights } = await getFlightData()
+```
+
+## Entwicklungsrichtlinien
+- ESLint + Prettier: `npm run lint`, `npm run format`
+- Komponenten klein und modular halten; keine Inline-Stile (Ausnahmen: Map)
+- Commit-Nachrichten nach Conventional Commits
+
+## Deployment
+```
+npm run build
+```
+Das Build liegt in `dist/` und kann als statische Seite bereitgestellt werden.
