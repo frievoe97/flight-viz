@@ -2,6 +2,20 @@
 @plugin "tailwindcss-animate";
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100dvh;
+    width: 100dvw;
+    margin: 0;
+    overflow: hidden;
+  }
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;

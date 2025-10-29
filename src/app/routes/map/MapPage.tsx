@@ -7,13 +7,15 @@ export default function MapPage() {
   return (
     <div className="h-full w-full">
       <DeckGL
-        initialViewState={INITIAL_VIEW_STATE as unknown as {
-          longitude: number
-          latitude: number
-          zoom: number
-          bearing: number
-          pitch: number
-        }}
+        initialViewState={
+          INITIAL_VIEW_STATE as unknown as {
+            longitude: number
+            latitude: number
+            zoom: number
+            bearing: number
+            pitch: number
+          }
+        }
         controller={{ dragRotate: false }}
         layers={[]}
         style={{ position: 'relative', width: '100%', height: '100%' }}
