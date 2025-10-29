@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import DeckGL from '@deck.gl/react'
 import { LineLayer } from '@deck.gl/layers'
-import Map, { NavigationControl, type MapRef } from 'react-map-gl/maplibre'
+import Map, { type MapRef } from 'react-map-gl/maplibre'
+import { PlusIcon, MinusIcon, ResetIcon } from '@radix-ui/react-icons'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { getFlightData, type FlightSegment } from '@/data'
@@ -165,7 +166,7 @@ export default function MapPage() {
       <div className="relative" style={{ gridRow: '1 / 2' }}>
         <DeckGL
           style={{ position: 'absolute', inset: 0 }}
-          controller={false}
+          controller={{ dragRotate: true, touchRotate: true, inertia: 220, minZoom: 1.5, maxZoom: 12, maxPitch: 85 }}
           parameters={{
             blendColorOperation: 'add',
             blendColorSrcFactor: 'src-alpha',
@@ -176,36 +177,67 @@ export default function MapPage() {
           }}
           layers={layers}
           viewState={viewState}
+          onViewStateChange={({ viewState: vs }) =>
+            setViewState({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              longitude: (vs as any).longitude,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              latitude: (vs as any).latitude,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              zoom: (vs as any).zoom,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              bearing: (vs as any).bearing,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              pitch: (vs as any).pitch,
+            })
+          }
           getTooltip={getTooltip}
           getCursor={({ isDragging, isHovering }: { isDragging: boolean; isHovering: boolean }) => (isDragging ? 'grabbing' : isHovering ? 'pointer' : 'grab')}
           onClick={({ object }: { object?: FlightSegment | null }) => setSelectedFlightId(object?.flightId ?? null)}
-        >
+          >
           <Map
             ref={mapRef}
             mapLib={maplibregl}
             mapStyle={MAP_STYLE}
             attributionControl={false}
+            interactive={false}
             maxPitch={85}
             onLoad={() => setReady(true)}
-            onMove={(evt) => {
-              // Only sync on user interactions; ignore programmatic moves (fitBounds/easeTo)
-              // react-map-gl/maplibre sets originalEvent for user-driven interactions
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const oe = (evt as any).originalEvent
-              if (!oe) return
-              setViewState({
-                longitude: evt.viewState.longitude,
-                latitude: evt.viewState.latitude,
-                zoom: evt.viewState.zoom,
-                bearing: evt.viewState.bearing,
-                pitch: evt.viewState.pitch,
-              })
-            }}
             style={{ width: '100%', height: '100%' }}
           >
-            <NavigationControl position="top-right" visualizePitch showCompass showZoom />
           </Map>
         </DeckGL>
+        <div className="absolute top-3 right-3 flex flex-col gap-2">
+          <button
+            className="rounded-md border bg-[hsl(var(--background))] text-sm p-2 shadow"
+            onClick={() => setViewState((s) => (s ? { ...s, zoom: s.zoom + 0.5 } : s))}
+            aria-label="Zoom in"
+          >
+            <PlusIcon />
+          </button>
+          <button
+            className="rounded-md border bg-[hsl(var(--background))] text-sm p-2 shadow"
+            onClick={() => setViewState((s) => (s ? { ...s, zoom: s.zoom - 0.5 } : s))}
+            aria-label="Zoom out"
+          >
+            <MinusIcon />
+          </button>
+          <button
+            className="rounded-md border bg-[hsl(var(--background))] text-sm p-2 shadow"
+            onClick={() =>
+              setViewState({
+                longitude: data.INITIAL_VIEW_STATE.longitude,
+                latitude: data.INITIAL_VIEW_STATE.latitude,
+                zoom: data.INITIAL_VIEW_STATE.zoom,
+                bearing: data.INITIAL_VIEW_STATE.bearing,
+                pitch: data.INITIAL_VIEW_STATE.pitch,
+              })
+            }
+            aria-label="Reset view"
+          >
+            <ResetIcon />
+          </button>
+        </div>
       </div>
       <div className="border-t p-3 overflow-hidden" style={{ gridRow: '2 / 3' }}>
         {selectedFlight && chartData ? (

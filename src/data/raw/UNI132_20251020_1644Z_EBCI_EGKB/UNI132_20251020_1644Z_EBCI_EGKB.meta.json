@@ -1,0 +1,25 @@
+{
+  "start_time_berlin": "20.10.2025 18:34:14",
+  "end_time_berlin": "20.10.2025 19:15:33",
+  "duration_seconds": 2479,
+  "track_length_km": 388.509,
+  "bbox": {
+    "min_lat": 50.4094,
+    "min_lon": 0.0415,
+    "max_lat": 51.5817,
+    "max_lon": 4.4341
+  },
+  "speed_kts_min": 113,
+  "speed_kts_max": 464,
+  "speed_kts_avg": 295.7,
+  "speed_mph_min": 130,
+  "speed_mph_max": 534,
+  "speed_mph_avg": 340.3,
+  "altitude_ft_min": 1425,
+  "altitude_ft_max": 20000,
+  "altitude_ft_avg": 11099,
+  "vertical_rate_fpm_min": -2302.0,
+  "vertical_rate_fpm_max": 3865.0,
+  "vertical_rate_fpm_avg": 55.7,
+  "points": 98
+}
