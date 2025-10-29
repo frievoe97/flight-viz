@@ -1,87 +1,30 @@
-type ChartPoint = {
-  distanceKm: number
-  altitudeFt: number | null
-  speedKts: number | null
-}
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
 
-function buildPath(
-  data: ChartPoint[],
-  valueAccessor: (p: ChartPoint) => number | null,
-  xAccessor: (p: ChartPoint) => number,
-  yAccessor: (v: number) => number
-) {
-  let path = ''
-  let hasSegment = false
-  for (const point of data) {
-    const value = valueAccessor(point)
-    if (!Number.isFinite(value)) {
-      hasSegment = false
-      continue
-    }
-    const x = xAccessor(point)
-    const y = yAccessor(value as number)
-    if (!Number.isFinite(x) || !Number.isFinite(y)) {
-      hasSegment = false
-      continue
-    }
-    path += hasSegment ? ` L ${x} ${y}` : `M ${x} ${y}`
-    hasSegment = true
-  }
-  return path
-}
+export type ChartPoint = { distanceKm: number; altitudeFt: number | null; speedKts: number | null }
 
 export function FlightChart({ data }: { data: ChartPoint[] }) {
   if (!data?.length) return null
-
-  const chartWidth = 720
-  const chartHeight = 150
-  const padding = { top: 22, right: 46, bottom: 28, left: 46 }
-  const innerWidth = chartWidth - padding.left - padding.right
-  const innerHeight = chartHeight - padding.top - padding.bottom
-
-  const lastPoint = data[data.length - 1]
-  const maxDistance = Number.isFinite(lastPoint?.distanceKm)
-    ? (lastPoint.distanceKm as number)
-    : data.length > 1
-    ? data.length - 1
-    : 1
-  const effectiveDistance = maxDistance > 0 ? maxDistance : 1
-
-  const altitudeValues = data.map((p) => p.altitudeFt).filter((v) => Number.isFinite(v as number)) as number[]
-  const speedValues = data.map((p) => p.speedKts).filter((v) => Number.isFinite(v as number)) as number[]
-  const maxAltitude = altitudeValues.length ? Math.max(...altitudeValues) : 0
-  const maxSpeed = speedValues.length ? Math.max(...speedValues) : 0
-  const altitudeScale = maxAltitude > 0 ? maxAltitude : 1
-  const speedScale = maxSpeed > 0 ? maxSpeed : 1
-
-  const toX = (point: ChartPoint) =>
-    padding.left +
-    (Number.isFinite(point.distanceKm)
-      ? ((point.distanceKm as number) / effectiveDistance) * innerWidth
-      : 0)
-
-  const toYAltitude = (value: number) => padding.top + innerHeight - (value / altitudeScale) * innerHeight
-  const toYSpeed = (value: number) => padding.top + innerHeight - (value / speedScale) * innerHeight
-
-  const altitudePath = buildPath(data, (p) => p.altitudeFt, toX, toYAltitude)
-  const speedPath = buildPath(data, (p) => p.speedKts, toX, toYSpeed)
+  const fmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
+  const last = data[data.length - 1]
+  const maxX = Number.isFinite(last?.distanceKm) ? (last.distanceKm as number) : data.length
+  const ticks = Array.from({ length: 5 }, (_, i) => Math.round((i * maxX) / 4))
 
   return (
-    <div className="w-full overflow-hidden">
-      <svg className="w-full" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Flight chart">
-        <defs>
-          <linearGradient id="altitudeGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(168, 85, 247, 0.4)" />
-            <stop offset="100%" stopColor="rgba(56, 189, 248, 0.05)" />
-          </linearGradient>
-        </defs>
-        <rect x={padding.left} y={padding.top} width={innerWidth} height={innerHeight} fill="url(#altitudeGradient)" opacity="0.15" />
-        {altitudePath && <path d={altitudePath} stroke="#a855f7" strokeWidth={2} fill="none" />}
-        {speedPath && <path d={speedPath} stroke="#38bdf8" strokeWidth={1.5} fill="none" opacity={0.9} />}
-      </svg>
+    <div className="w-full h-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" opacity={0.4} />
+          <XAxis dataKey="distanceKm" type="number" domain={[0, maxX]} ticks={ticks} tickFormatter={(v) => `${fmt.format(v)} km`} />
+          <YAxis yAxisId="alt" orientation="left" tickFormatter={(v) => `${fmt.format(v)} ft`} allowDecimals={false} width={56} />
+          <YAxis yAxisId="spd" orientation="right" tickFormatter={(v) => `${fmt.format(v)} kt`} allowDecimals={false} width={48} />
+          <Tooltip formatter={(value: any, name) => [fmt.format(value as number), name === 'altitudeFt' ? 'Altitude (ft)' : 'Speed (kt)']} labelFormatter={(v) => `Distance: ${fmt.format(Number(v))} km`} />
+          <Legend />
+          <Line yAxisId="alt" type="monotone" dataKey="altitudeFt" name="Altitude (ft)" stroke="#a855f7" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls />
+          <Line yAxisId="spd" type="monotone" dataKey="speedKts" name="Speed (kt)" stroke="#38bdf8" dot={false} strokeWidth={1.5} opacity={0.9} isAnimationActive={false} connectNulls />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   )
 }
 
 export default FlightChart
-
