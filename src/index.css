@@ -9,12 +9,25 @@
   }
 
   html,
-  body,
-  #root {
-    height: 100dvh;
+  body {
+    height: 100%;
     width: 100%;
     margin: 0;
+    padding: 0;
     overflow: hidden;
+  }
+  #root {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
   }
   :root {
     --background: 0 0% 100%;
