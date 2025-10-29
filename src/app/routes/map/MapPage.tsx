@@ -5,20 +5,16 @@ import { INITIAL_VIEW_STATE, MAP_STYLE, MAP_INTERACTION } from '@/lib/map/deckCo
 
 export default function MapPage() {
   return (
-    <div className="h-full w-full">
+    // Der Wrapper definiert die Fläche
+    <div className="relative h-full w-full">
       <DeckGL
-        initialViewState={
-          INITIAL_VIEW_STATE as unknown as {
-            longitude: number
-            latitude: number
-            zoom: number
-            bearing: number
-            pitch: number
-          }
-        }
+        initialViewState={INITIAL_VIEW_STATE as any}
         controller={{ dragRotate: false }}
         layers={[]}
-        style={{ position: 'relative', width: '100%', height: '100%' }}
+        // KEIN className: DeckGL kennt das nicht
+        width="100%"
+        height="100%"
+        // style ist okay, aber hier nicht nötig
       >
         <Map
           reuseMaps
