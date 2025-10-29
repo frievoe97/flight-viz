@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 
 export function Header() {
   return (
-    <div className="w-full flex items-center justify-between gap-3">
+    <div className="w-full flex items-center justify-between gap-3 p-4">
       <Link to="/" className="text-sm font-semibold">
         Flight Viz
       </Link>
