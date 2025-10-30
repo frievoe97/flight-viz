@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts'
+import { colors } from '@/lib/theme/tokens'
 
 export type ChartPoint = { distanceKm: number; altitudeFt: number | null; speedKts: number | null }
 
@@ -66,7 +67,7 @@ export function FlightChart({ data }: { data: ChartPoint[] }) {
             type="monotone"
             dataKey="altitudeFt"
             name="Altitude (ft)"
-            stroke="var(--flight-altitude)"
+            stroke={colors.chart.altitude}
             dot={false}
             strokeWidth={2}
             isAnimationActive={false}
@@ -77,7 +78,7 @@ export function FlightChart({ data }: { data: ChartPoint[] }) {
             type="monotone"
             dataKey="speedKts"
             name="Speed (kt)"
-            stroke="var(--flight-speed)"
+            stroke={colors.chart.speed}
             dot={false}
             strokeWidth={1.5}
             opacity={0.9}
