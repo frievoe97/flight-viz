@@ -55,6 +55,14 @@ export function FlightChart({ data }: { data: ChartPoint[] }) {
             tickLine={false}
           />
           <Tooltip
+            contentStyle={{
+              background: 'hsla(var(--panel-bg), 0.95)',
+              border: '1px solid var(--panel-border)',
+              color: '#fff',
+              borderRadius: 8,
+              fontSize: '0.75rem',
+            }}
+            itemStyle={{ color: '#fff' }}
             formatter={(value: number | string, name: string) => [
               fmt.format(typeof value === 'number' ? value : Number(value)),
               name === 'altitudeFt' ? 'Altitude (ft)' : 'Speed (kt)',

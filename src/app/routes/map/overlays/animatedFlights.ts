@@ -13,9 +13,11 @@ const ANIMATIONS: ScenegraphLayerProps['_animations'] = {
   '*': { speed: 1 },
 }
 
-const BASE_SPEED = 0.12
-const SMOOTH = 0.2
+const BASE_SPEED = 0.004
+const SMOOTH = 0.35
 const FLIGHT_FADE_WINDOW = 0.05
+const TARGET_FPS = 20
+const FRAME_INTERVAL = 1 / TARGET_FPS
 
 type FlightLite = Pick<Flight, 'id' | 'name' | 'points'>
 
@@ -52,13 +54,16 @@ const lerpVec3 = (
 export function useAnimatedFlightsOverlay({
   flights,
   isActive,
+  speedMultiplier,
 }: {
   flights: FlightLite[]
   isActive: boolean
+  speedMultiplier: number
 }) {
   const progressRef = useRef<Map<string, number>>(new Map())
   const lastStateRef = useRef<Map<string, StateEntry>>(new Map())
   const rafRef = useRef(0)
+  const accumulatorRef = useRef(0)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -80,21 +85,32 @@ export function useAnimatedFlightsOverlay({
     const loop = (now: number) => {
       const dt = (now - last) / 1000
       last = now
-      for (const f of flights) {
-        const cur = progressRef.current.get(f.id) ?? Math.random()
-        let next = cur + dt * BASE_SPEED
-        if (next >= 1) next = next % 1
-        if (next < cur) {
-          lastStateRef.current.delete(f.id)
+      accumulatorRef.current += dt
+
+      let updated = false
+      while (accumulatorRef.current >= FRAME_INTERVAL) {
+        const step = FRAME_INTERVAL * BASE_SPEED * speedMultiplier
+        for (const f of flights) {
+          const cur = progressRef.current.get(f.id) ?? Math.random()
+          let next = cur + step
+          if (next >= 1) next = next % 1
+          if (next < cur) {
+            lastStateRef.current.delete(f.id)
+          }
+          progressRef.current.set(f.id, next)
         }
-        progressRef.current.set(f.id, next)
+        accumulatorRef.current -= FRAME_INTERVAL
+        updated = true
       }
-      setTick((t) => t + 1)
+
+      if (updated) {
+        setTick((t) => t + 1)
+      }
       rafRef.current = requestAnimationFrame(loop)
     }
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [isActive, flights])
+  }, [isActive, flights, speedMultiplier])
 
   const layer = useMemo(() => {
     if (!isActive || !flights.length) return null

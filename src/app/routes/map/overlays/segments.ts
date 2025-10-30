@@ -12,12 +12,14 @@ export function useSegmentsLayer({
   selectedFlightId,
   hoveredFlightId,
   altitudeScale,
+  widthScale,
 }: {
   segments: FlightSegment[]
   isActive: boolean
   selectedFlightId: string | null
   hoveredFlightId: string | null
   altitudeScale: number
+  widthScale: number
 }) {
   return useMemo(() => {
     if (!isActive) return null
@@ -63,14 +65,15 @@ export function useSegmentsLayer({
         if (d.flightId === selectedFlightId) return 6
         const value = Number.isFinite(d.startAltitudeFeet) ? d.startAltitudeFeet : 0
         const ratio = Math.max(0, Math.min(value / altitudeScale, 1))
-        return 3.5 + ratio * 3.5
+        const base = 3.5 + ratio * 3.5
+        return base * widthScale
       },
       updateTriggers: {
-        getWidth: [selectedFlightId, altitudeScale],
+        getWidth: [selectedFlightId, altitudeScale, widthScale],
         getColor: [selectedFlightId, hoveredFlightId, altitudeScale],
       },
     })
-  }, [segments, isActive, selectedFlightId, hoveredFlightId, altitudeScale])
+  }, [segments, isActive, selectedFlightId, hoveredFlightId, altitudeScale, widthScale])
 }
 
 export function findSelectedFlight(
@@ -80,4 +83,3 @@ export function findSelectedFlight(
   if (!flights || !selectedFlightId) return null
   return flights.find((f) => f.id === selectedFlightId) ?? null
 }
-

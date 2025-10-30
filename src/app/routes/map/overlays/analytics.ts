@@ -13,10 +13,12 @@ export function useAnalyticsLayer({
   points,
   isActive,
   metric,
+  radius,
 }: {
   points: AnalyticsPoint[]
   isActive: boolean
   metric: 'alt' | 'count'
+  radius: number
 }) {
   return useMemo(() => {
     if (!isActive) return null
@@ -30,7 +32,7 @@ export function useAnalyticsLayer({
       data: points,
       pickable: true,
       extruded: true,
-      radius: 15000,
+      radius,
       elevationScale: 20,
       getPosition: (d: AnalyticsPoint) => d.position,
       getElevationWeight: (d: AnalyticsPoint) => (metric === 'alt' ? d.altitude || 0 : 1),
@@ -40,5 +42,5 @@ export function useAnalyticsLayer({
       colorRange,
       material: true,
     })
-  }, [points, isActive, metric])
+  }, [points, isActive, metric, radius])
 }

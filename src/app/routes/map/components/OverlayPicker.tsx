@@ -19,28 +19,34 @@ export function OverlayPicker({
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className="rounded-lg border bg-[hsl(var(--background))] p-3 shadow-lg w-64">
-          <div className="flex flex-col gap-2 text-sm">
+        <Popover.Content
+          side="right"
+          align="start"
+          sideOffset={8}
+          className="rounded-lg border w-64 bg-[#0f172a]/95 backdrop-blur-md shadow-lg ml-3 -mt-3"
+          style={{ borderColor: 'var(--panel-border)' }}
+        >
+          <div className="flex flex-col gap-2 text-sm text-white p-3">
             {overlayOptions.map((option) => {
               const activeVariant = option.id === active
               return (
-                <button
-                  type="button"
-                  key={option.id}
-                  onClick={() => onSelect(option.id)}
-                  className={cn(
-                    'w-full text-left rounded-md border px-3 py-2 transition-colors',
-                    activeVariant
-                      ? 'bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))]'
-                      : 'hover:bg-[hsl(var(--muted))]'
-                  )}
-                  style={{ borderColor: 'hsl(var(--border))' }}
-                >
-                  <div className="font-medium">{option.label}</div>
-                  <div className="text-xs text-[hsl(var(--muted-foreground))]">
-                    {option.description}
-                  </div>
-                </button>
+                <Popover.Close asChild key={option.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(option.id)}
+                    className={cn(
+                      'w-full text-left rounded-md border px-3 py-2 transition-colors',
+                      activeVariant
+                        ? 'bg-[var(--panel-bg)]/90 text-white border-[color:var(--panel-border)]'
+                        : 'hover:bg-white/10 border-[color:var(--panel-border)]'
+                    )}
+                  >
+                    <div className="font-medium">{option.label}</div>
+                    <div className="text-xs text-[hsl(var(--muted-foreground))]">
+                      {option.description}
+                    </div>
+                  </button>
+                </Popover.Close>
               )
             })}
           </div>
@@ -51,4 +57,3 @@ export function OverlayPicker({
 }
 
 export default OverlayPicker
-

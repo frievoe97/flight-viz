@@ -1,7 +1,6 @@
-import type { MapProps } from 'react-map-gl'
+import type { MapProps } from '@vis.gl/react-maplibre'
 
-export const MAP_STYLE =
-  'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json'
+export const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json'
 
 export const INITIAL_VIEW_STATE: MapProps['initialViewState'] = {
   latitude: 0,

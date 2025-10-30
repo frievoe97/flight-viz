@@ -9,10 +9,19 @@ export type Trip = {
   duration: number
 }
 
-const TRAIL_LENGTH_SECONDS = 45
-const TRAIL_SPEED = 35
+const BASE_TRAIL_SPEED = 35
 
-export function useTrailsOverlay({ trips, isActive }: { trips: Trip[]; isActive: boolean }) {
+export function useTrailsOverlay({
+  trips,
+  isActive,
+  speedMultiplier,
+  trailLengthSeconds,
+}: {
+  trips: Trip[]
+  isActive: boolean
+  speedMultiplier: number
+  trailLengthSeconds: number
+}) {
   const timeRef = useRef<Map<string, number>>(new Map())
   const rafRef = useRef(0)
   const [tick, setTick] = useState(0)
@@ -25,7 +34,8 @@ export function useTrailsOverlay({ trips, isActive }: { trips: Trip[]; isActive:
       last = now
       for (const trip of trips) {
         const cur = timeRef.current.get(trip.id) ?? 0
-        const next = trip.duration > 0 ? (cur + dt * TRAIL_SPEED) % trip.duration : 0
+        const step = dt * BASE_TRAIL_SPEED * speedMultiplier
+        const next = trip.duration > 0 ? (cur + step) % trip.duration : 0
         timeRef.current.set(trip.id, next)
       }
       setTick((t) => t + 1)
@@ -33,7 +43,7 @@ export function useTrailsOverlay({ trips, isActive }: { trips: Trip[]; isActive:
     }
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [isActive, trips])
+  }, [isActive, trips, speedMultiplier])
 
   return useMemo(() => {
     if (!isActive || !trips.length) return [] as TripsLayer<Trip>[]
@@ -53,9 +63,9 @@ export function useTrailsOverlay({ trips, isActive }: { trips: Trip[]; isActive:
           rounded: true,
           capRounded: true,
           fadeTrail: true,
-          trailLength: Math.min(TRAIL_LENGTH_SECONDS, Math.max(1, trip.duration)),
+          trailLength: Math.min(trailLengthSeconds, Math.max(1, trip.duration)),
           getColor: () => colors.flight.high,
         })
     )
-  }, [isActive, trips, tick])
+  }, [isActive, trips, trailLengthSeconds, tick])
 }
