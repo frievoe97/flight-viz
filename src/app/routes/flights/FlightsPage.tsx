@@ -51,13 +51,38 @@ export default function FlightsPage() {
     })
   }, [])
 
+  // Build a stable list of flights with at least 2 points (no allocation each frame)
+  const flightsBase = useMemo(() => {
+    if (!data) return [] as Array<Pick<Flight, 'id' | 'name' | 'points'>>
+    return data.flights
+      .filter((f) => f.points.length >= 2)
+      .map((f) => ({ id: f.id, name: f.name, points: f.points }))
+  }, [data])
+
+  // Initialize per-flight progress once and prune removed flights
+  useEffect(() => {
+    if (!flightsBase.length) return
+    const setIds = new Set(flightsBase.map((f) => f.id))
+    // initialize missing with randomized offsets to desync
+    for (const f of flightsBase) {
+      if (!progressRef.current.has(f.id)) {
+        progressRef.current.set(f.id, Math.random())
+      }
+    }
+    // prune stale ids
+    for (const key of Array.from(progressRef.current.keys())) {
+      if (!setIds.has(key)) progressRef.current.delete(key)
+    }
+  }, [flightsBase])
+
   useEffect(() => {
     let last = performance.now()
     const loop = (now: number) => {
       const dt = (now - last) / 1000
       last = now
-      const SPEED = 0.12 // cycles per second
-      const flights = dataRef.current?.flights ?? []
+      const SPEED_FACTOR = 1.0 // change this to speed up or slow down globally
+      const SPEED = 0.12 * SPEED_FACTOR // cycles per second
+      const flights = flightsBase
       if (flights.length) {
         for (const f of flights) {
           const cur = progressRef.current.get(f.id) ?? Math.random() // desync starts
@@ -72,25 +97,34 @@ export default function FlightsPage() {
     }
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [])
+  }, [flightsBase])
 
   const layers = useMemo(() => {
     if (!data) return []
     // Build an entry per flight with current position interpolated along its path
-    type Animated = { id: string; name: string; position: [number, number, number] }
+    type Animated = {
+      id: string
+      name: string
+      position: [number, number, number]
+      orientation: [number, number, number]
+    }
 
-    const flights: Animated[] = data.flights.map((f: Flight) => {
+    const toRad = (v: number) => (v * Math.PI) / 180
+    const bearingDeg = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const phi1 = toRad(lat1)
+      const phi2 = toRad(lat2)
+      const dLon = toRad(lon2 - lon1)
+      const y = Math.sin(dLon) * Math.cos(phi2)
+      const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon)
+      return (Math.atan2(y, x) * 180) / Math.PI
+    }
+
+    const flights: Animated[] = flightsBase.map((f) => {
       const pts = f.points
-      if (pts.length === 0) return { id: f.id, name: f.name, position: [0, 0, 0] }
-      // total distance by last point's distanceKm or points length
       const last = pts[pts.length - 1]
-      const total = Number.isFinite(last.distanceKm as number)
-        ? (last.distanceKm as number) > 0
-          ? (last.distanceKm as number)
-          : pts.length - 1
-        : pts.length - 1
+      const steps = pts.length - 1
       const phase = progressRef.current.get(f.id) ?? 0
-      const pathT = total > 0 ? phase * total : phase * (pts.length - 1)
+      const pathT = phase * steps
       const idx = Math.floor(pathT)
       const frac = pathT - idx
       const a = pts[Math.max(0, Math.min(idx, pts.length - 1))]
@@ -99,7 +133,10 @@ export default function FlightsPage() {
       const lat = a.position[1] + (b.position[1] - a.position[1]) * frac
       const alt =
         (a.altitudeMeters ?? 0) + ((b.altitudeMeters ?? 0) - (a.altitudeMeters ?? 0)) * frac
-      return { id: f.id, name: f.name, position: [lon, lat, alt] }
+      const yaw = -bearingDeg(a.position[1], a.position[0], b.position[1], b.position[0])
+      const dAlt = (b.altitudeMeters ?? 0) - (a.altitudeMeters ?? 0)
+      const pitch = Math.max(-30, Math.min(30, (Math.atan2(dAlt, 1000) * 180) / Math.PI))
+      return { id: f.id, name: f.name, position: [lon, lat, alt], orientation: [pitch, yaw, 90] }
     })
 
     return [
@@ -109,14 +146,15 @@ export default function FlightsPage() {
         pickable: true,
         scenegraph: MODEL_URL,
         _animations: ANIMATIONS,
-        sizeScale: 200,
+        sizeScale: 300,
+        getId: (d) => d.id,
         getPosition: (d) => d.position,
-        getOrientation: () => [0, 0, 90],
+        getOrientation: (d) => d.orientation,
         getFillColor: () => [255, 255, 255],
-        updateTriggers: { getPosition: [tick] },
+        updateTriggers: { getPosition: [tick], getOrientation: [tick] },
       }),
     ]
-  }, [data, tick])
+  }, [data, flightsBase, tick])
 
   if (!data || !viewState) return <div className="h-full w-full" />
 

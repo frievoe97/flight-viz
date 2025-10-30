@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@deck.gl/aggregation-layers": "^9.2.2",
     "@deck.gl/core": "^9.2.2",
     "@deck.gl/mesh-layers": "^9.2.2",
     "@deck.gl/react": "^9.2.2",
