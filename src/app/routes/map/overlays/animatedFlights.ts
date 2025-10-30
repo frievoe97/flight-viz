@@ -128,11 +128,31 @@ export function useAnimatedFlightsOverlay({
       const lat = a.position[1] + (b.position[1] - a.position[1]) * frac
       const alt =
         (a.altitudeMeters ?? 0) + ((b.altitudeMeters ?? 0) - (a.altitudeMeters ?? 0)) * frac
-      const yaw = -bearingDeg(a.position[1], a.position[0], b.position[1], b.position[0])
+
+      const bearing = bearingDeg(a.position[1], a.position[0], b.position[1], b.position[0])
+
+      // Deck.gl + airplane.glb: Yaw invertieren, Roll = 90°.
+      const yaw = -bearing + 180
+
+      // Optional etwas “realistischer”: Pitch aus Steigung zwischen A und B.
+      // Nimm horizontale Distanz in Metern statt fixer 1000:
       const dAlt = (b.altitudeMeters ?? 0) - (a.altitudeMeters ?? 0)
-      const pitch = Math.max(-30, Math.min(30, (Math.atan2(dAlt, 1000) * 180) / Math.PI))
-      const targetPos: [number, number, number] = [lon, lat, alt]
+      const dLon =
+        (b.position[0] - a.position[0]) *
+        Math.cos((Math.PI / 180) * ((a.position[1] + b.position[1]) / 2))
+      const dLat = b.position[1] - a.position[1]
+      const groundDeg = Math.sqrt(dLon * dLon + dLat * dLat)
+      const metersPerDeg = 111320 // grob, reicht hier
+      const groundMeters = groundDeg * metersPerDeg
+      const pitch = Math.max(
+        -30,
+        Math.min(30, (Math.atan2(dAlt, Math.max(1, groundMeters)) * 180) / Math.PI)
+      )
+
       const targetOri: [number, number, number] = [pitch, yaw, 90]
+
+      const targetPos: [number, number, number] = [lon, lat, alt]
+      // const targetOri: [number, number, number] = [pitch, yaw, 90]
       const prev = lastStateRef.current.get(f.id)
       const smoothPos = prev ? lerpVec3(prev.position, targetPos, SMOOTH) : targetPos
       const smoothOri = prev ? lerpVec3(prev.orientation, targetOri, SMOOTH) : targetOri
@@ -154,7 +174,7 @@ export function useAnimatedFlightsOverlay({
       pickable: true,
       scenegraph: MODEL_URL,
       _animations: ANIMATIONS,
-      sizeScale: 300,
+      sizeScale: 400,
       getPosition: (d) => d.position,
       getOrientation: (d) => d.orientation,
       getColor: (d) => [255, 255, 255, Math.round(d.opacity * 255)],

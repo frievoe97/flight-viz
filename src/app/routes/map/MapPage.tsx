@@ -4,11 +4,11 @@ import * as maplibregl from 'maplibre-gl'
 import type { Map as MaplibreMap, LngLatBoundsLike, PaddingOptions } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
-import type { Layer, PickingInfo } from '@deck.gl/core'
+import type { Deck, Layer, PickingInfo } from '@deck.gl/core'
 import { getFlightData, type Flight, type FlightSegment } from '@/data'
 import { MAP_STYLE } from '@/lib/map/deckConfig'
 import FlightChart from './FlightChart'
-import type { OverlayId } from './overlays/options'
+import { overlayOptions, type OverlayId } from './overlays/options'
 import { useSegmentsLayer, findSelectedFlight } from './overlays/segments'
 import { useAnimatedFlightsOverlay } from './overlays/animatedFlights'
 import { useTrailsOverlay, type Trip } from './overlays/trails'
@@ -24,6 +24,14 @@ type MapWithCamera = MaplibreMap & {
 
 const ZERO_PADDING: PaddingOptions = { top: 0, right: 0, bottom: 0, left: 0 }
 
+const MODE_SUPPORT: Record<'globe' | 'mercator', ReadonlyArray<OverlayId>> = {
+  globe: ['flights', 'trails'],
+  mercator: ['segments', 'analytics', 'flights', 'trails'],
+} as const
+
+type ProjectionMode = keyof typeof MODE_SUPPORT
+type DeckWithOptionalRedraw = Deck & { setNeedsRedraw?: (reason: string) => void }
+
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between text-[0.75rem]">
@@ -34,20 +42,58 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function MapPage() {
-  const [activeOverlay, setActiveOverlay] = useState<OverlayId>('segments')
+  const [activeOverlay, setActiveOverlay] = useState<OverlayId>('trails')
   const [analyticsMetric, setAnalyticsMetric] = useState<'alt' | 'count'>('alt')
   const [ready, setReady] = useState(false)
   const [data, setData] = useState<Awaited<ReturnType<typeof getFlightData>> | null>(null)
   const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null)
   const [hoveredFlightId, setHoveredFlightId] = useState<string | null>(null)
-  const [flightSpeedMultiplier, setFlightSpeedMultiplier] = useState(1)
-  const [trailSpeedMultiplier, setTrailSpeedMultiplier] = useState(1)
-  const [trailLengthSeconds, setTrailLengthSeconds] = useState(45)
+  const [flightSpeedMultiplier, setFlightSpeedMultiplier] = useState(20)
+  const [trailSpeedMultiplier, setTrailSpeedMultiplier] = useState(2)
+  const [trailLengthSeconds, setTrailLengthSeconds] = useState(30)
   const [segmentWidthScale, setSegmentWidthScale] = useState(1)
   const [analyticsRadius, setAnalyticsRadius] = useState(20000)
+  const [projectionMode, setProjectionMode] = useState<ProjectionMode>('globe')
 
   const mapRef = useRef<MapRef | null>(null)
   const deckOverlayRef = useRef<MapboxOverlay | null>(null)
+  const lastOverlayByMode = useRef<Partial<Record<ProjectionMode, OverlayId>>>({
+    mercator: 'segments',
+    globe: 'trails',
+  })
+  const hasFitBoundsRef = useRef(false)
+
+  const requestDeckRedraw = useCallback((reason: string) => {
+    const overlayWithDeck = deckOverlayRef.current as unknown as {
+      deck?: DeckWithOptionalRedraw
+    } | null
+    overlayWithDeck?.deck?.setNeedsRedraw?.(reason)
+  }, [])
+
+  useEffect(() => {
+    hasFitBoundsRef.current = false
+  }, [data])
+
+  const zoomToDataBounds = useCallback(() => {
+    if (!data) return
+    const map = mapRef.current?.getMap?.()
+    if (!map) return
+    const bounds = new maplibregl.LngLatBounds()
+    for (const flight of data.flights) {
+      for (const point of flight.points) {
+        const [lon, lat] = point.position
+        if (Number.isFinite(lon) && Number.isFinite(lat)) {
+          bounds.extend([lon, lat])
+        }
+      }
+    }
+    if (bounds.isEmpty()) return
+    hasFitBoundsRef.current = true
+    map.fitBounds(bounds, {
+      padding: { top: 48, right: 48, bottom: 48, left: 48 },
+      duration: 0,
+    })
+  }, [data])
 
   const isSegments = activeOverlay === 'segments'
   const isFlights = activeOverlay === 'flights'
@@ -97,16 +143,112 @@ export default function MapPage() {
       map.once('remove', () => overlay.finalize())
     }
 
-    map.setProjection({ type: 'mercator' })
-    map.setMaxPitch(85)
+    map.dragPan?.enable?.()
+    map.scrollZoom?.enable?.()
+    map.boxZoom?.enable?.()
+    map.doubleClickZoom?.enable?.()
+    map.touchZoomRotate?.enable?.()
     map.dragRotate?.enable?.()
     map.touchZoomRotate?.enableRotation?.()
-    map.touchZoomRotate?.enable?.()
     map.keyboard?.enable?.()
-    map.doubleClickZoom?.enable?.()
 
-    deckOverlayRef.current?.deck?.setNeedsRedraw('projection-change')
-  }, [ready])
+    requestDeckRedraw('projection-change')
+  }, [ready, requestDeckRedraw])
+
+  const applyProjection = useCallback(
+    (mode: 'globe' | 'mercator') => {
+      const map = mapRef.current?.getMap?.()
+      if (!map) return
+      const mercatorBearing = data?.INITIAL_VIEW_STATE?.bearing ?? 0
+      const mercatorPitch = data?.INITIAL_VIEW_STATE?.pitch ?? 0
+      map.setProjection?.({ type: mode })
+      if (mode === 'globe') {
+        map.setBearing(0)
+        map.setPitch(0)
+        map.setMaxPitch(0)
+        map.dragPan?.enable?.()
+        map.scrollZoom?.enable?.()
+        map.boxZoom?.enable?.()
+        map.doubleClickZoom?.enable?.()
+        map.touchZoomRotate?.enable?.()
+        map.touchZoomRotate?.disableRotation?.()
+        map.dragRotate?.disable?.()
+        map.keyboard?.disable?.()
+      } else {
+        map.setBearing(mercatorBearing)
+        map.setPitch(mercatorPitch)
+        map.setMaxPitch(85)
+        map.dragPan?.enable?.()
+        map.scrollZoom?.enable?.()
+        map.boxZoom?.enable?.()
+        map.doubleClickZoom?.enable?.()
+        map.touchZoomRotate?.enable?.()
+        map.dragRotate?.enable?.()
+        map.touchZoomRotate?.enableRotation?.()
+        map.keyboard?.enable?.()
+      }
+      requestDeckRedraw('projection-change')
+    },
+    [data, requestDeckRedraw]
+  )
+
+  useEffect(() => {
+    if (!ready) return
+    applyProjection(projectionMode)
+  }, [ready, projectionMode, applyProjection])
+
+  useEffect(() => {
+    if (!ready || !data || hasFitBoundsRef.current) return
+    zoomToDataBounds()
+  }, [ready, data, zoomToDataBounds])
+
+  const allowedOverlays = MODE_SUPPORT[projectionMode]
+  const allowedOverlaySet = useMemo(() => new Set<OverlayId>(allowedOverlays), [allowedOverlays])
+
+  useEffect(() => {
+    if (!allowedOverlaySet.has(activeOverlay)) {
+      const preferred = lastOverlayByMode.current[projectionMode]
+      let fallback: OverlayId
+      if (preferred && allowedOverlaySet.has(preferred)) {
+        fallback = preferred
+      } else {
+        fallback = (allowedOverlays[0] ?? 'flights')
+      }
+      setActiveOverlay(fallback)
+    } else {
+      lastOverlayByMode.current[projectionMode] = activeOverlay
+    }
+  }, [projectionMode, activeOverlay, allowedOverlaySet, allowedOverlays])
+
+  const handleOverlaySelect = useCallback(
+    (id: OverlayId) => {
+      if (!allowedOverlaySet.has(id)) return
+      setActiveOverlay(id)
+    },
+    [allowedOverlaySet]
+  )
+
+  const toggleProjection = useCallback(() => {
+    setProjectionMode((prev) => {
+      lastOverlayByMode.current[prev] = activeOverlay
+      return prev === 'mercator' ? 'globe' : 'mercator'
+    })
+  }, [activeOverlay])
+
+  useEffect(() => {
+    if (activeOverlay === 'trails') {
+      setTrailSpeedMultiplier(2)
+      setTrailLengthSeconds(30)
+    }
+    if (activeOverlay === 'flights') {
+      setFlightSpeedMultiplier(20)
+    }
+  }, [activeOverlay])
+
+  const disabledOverlays = useMemo<OverlayId[]>(
+    () => overlayOptions.map((option) => option.id).filter((id) => !allowedOverlaySet.has(id)),
+    [allowedOverlaySet]
+  )
 
   useEffect(() => {
     if (!ready || !data || !isSegments) return
@@ -327,24 +469,27 @@ export default function MapPage() {
           mapLib={maplibregl}
           mapStyle={MAP_STYLE}
           attributionControl={false}
-          projection="mercator"
-          maxPitch={85}
+          projection={projectionMode}
+          maxPitch={projectionMode === 'globe' ? 0 : 85}
           initialViewState={{
             latitude: data.INITIAL_VIEW_STATE.latitude,
             longitude: data.INITIAL_VIEW_STATE.longitude,
-            zoom: 1,
+            zoom: data.INITIAL_VIEW_STATE.zoom ?? 1,
             bearing: data.INITIAL_VIEW_STATE.bearing,
             pitch: data.INITIAL_VIEW_STATE.pitch,
             padding: ZERO_PADDING,
           }}
           onLoad={() => {
             setReady(true)
+            applyProjection(projectionMode)
           }}
           style={{ width: '100%', height: '100%' }}
         >
           <NavigationControl
+            key={projectionMode}
             style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}
-            visualizePitch={true}
+            showCompass={projectionMode !== 'globe'}
+            visualizePitch={projectionMode !== 'globe'}
           />
         </MapGL>
 
@@ -353,7 +498,18 @@ export default function MapPage() {
             className="flex flex-col gap-2 bg-[#0f172a]/85 backdrop-blur-sm p-3 rounded-lg border"
             style={{ borderColor: 'var(--panel-border)' }}
           >
-            <OverlayPicker active={activeOverlay} onSelect={(id) => setActiveOverlay(id)} />
+            <OverlayPicker
+              active={activeOverlay}
+              onSelect={handleOverlaySelect}
+              disabledOptions={disabledOverlays}
+            />
+            <button
+              type="button"
+              className="controls-btn rounded-md px-3 py-2 text-sm shadow"
+              onClick={toggleProjection}
+            >
+              Toggle Projection ({projectionMode === 'mercator' ? 'Globe' : 'Mercator'})
+            </button>
 
             {isFlights ? (
               <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
@@ -361,19 +517,14 @@ export default function MapPage() {
                   <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
                     Speed
                   </span>
-                  <span>
-                    {flightSpeedMultiplier >= 10
-                      ? flightSpeedMultiplier.toFixed(0)
-                      : flightSpeedMultiplier.toFixed(1)}
-                    x
-                  </span>
+                  <span>{flightSpeedMultiplier.toFixed(0)}x</span>
                 </div>
                 <input
                   className="w-full accent-[var(--flight-speed)]"
                   type="range"
-                  min={0.2}
-                  max={20}
-                  step={0.1}
+                  min={10}
+                  max={30}
+                  step={1}
                   value={flightSpeedMultiplier}
                   onChange={(event) => setFlightSpeedMultiplier(Number(event.target.value))}
                 />
