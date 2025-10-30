@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import DeckGL from '@deck.gl/react'
-import Map from 'react-map-gl/maplibre'
-import maplibregl from 'maplibre-gl'
+import MapGL from 'react-map-gl/maplibre' // ⟵ NICHT "Map" nennen
+import * as maplibregl from 'maplibre-gl' // ⟵ Namespace-Import
+import 'maplibre-gl/dist/maplibre-gl.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { ScenegraphLayer } from '@deck.gl/mesh-layers'
 import type { ScenegraphLayerProps } from '@deck.gl/mesh-layers'
@@ -32,7 +33,7 @@ export default function FlightsPage() {
   const [viewState, setViewState] = useState<VS | null>(null)
   const rafRef = useRef(0)
   const tickRef = useRef(0)
-  const [, forceTick] = useState(0)
+  const [tick, setTick] = useState(0)
   const progressRef = useRef<Map<string, number>>(new Map())
   const dataRef = useRef<Awaited<ReturnType<typeof getFlightData>> | null>(null)
 
@@ -66,7 +67,7 @@ export default function FlightsPage() {
         }
       }
       tickRef.current += 1
-      forceTick((t) => t + 1)
+      setTick((t) => t + 1)
       rafRef.current = requestAnimationFrame(loop)
     }
     rafRef.current = requestAnimationFrame(loop)
@@ -108,14 +109,14 @@ export default function FlightsPage() {
         pickable: true,
         scenegraph: MODEL_URL,
         _animations: ANIMATIONS,
-        sizeScale: 120,
+        sizeScale: 200,
         getPosition: (d) => d.position,
         getOrientation: () => [0, 0, 90],
         getFillColor: () => [255, 255, 255],
-        updateTriggers: { getPosition: [tickRef.current] },
+        updateTriggers: { getPosition: [tick] },
       }),
     ]
-  }, [data])
+  }, [data, tick])
 
   if (!data || !viewState) return <div className="h-full w-full" />
 
@@ -150,7 +151,7 @@ export default function FlightsPage() {
         layers={layers}
         getTooltip={({ object }) => (object ? (object as any).name : null)}
       >
-        <Map
+        <MapGL
           mapLib={maplibregl}
           mapStyle={MAP_STYLE}
           attributionControl={false}
