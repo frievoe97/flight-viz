@@ -212,7 +212,7 @@ export default function MapPage() {
       if (preferred && allowedOverlaySet.has(preferred)) {
         fallback = preferred
       } else {
-        fallback = (allowedOverlays[0] ?? 'flights')
+        fallback = allowedOverlays[0] ?? 'flights'
       }
       setActiveOverlay(fallback)
     } else {
@@ -304,6 +304,7 @@ export default function MapPage() {
     flights: flightsBase,
     isActive: isFlights,
     speedMultiplier: flightSpeedMultiplier,
+    projectionMode: projectionMode,
   })
 
   const trips = useMemo<Trip[]>(() => {
