@@ -30,12 +30,16 @@ type VS = {
 export default function FlightsPage() {
   const [data, setData] = useState<Awaited<ReturnType<typeof getFlightData>> | null>(null)
   const [viewState, setViewState] = useState<VS | null>(null)
-  const [time, setTime] = useState(0)
   const rafRef = useRef(0)
+  const tickRef = useRef(0)
+  const [, forceTick] = useState(0)
+  const progressRef = useRef<Map<string, number>>(new Map())
+  const dataRef = useRef<Awaited<ReturnType<typeof getFlightData>> | null>(null)
 
   useEffect(() => {
     getFlightData().then((d) => {
       setData(d)
+      dataRef.current = d
       setViewState({
         longitude: d.INITIAL_VIEW_STATE.longitude,
         latitude: d.INITIAL_VIEW_STATE.latitude,
@@ -51,8 +55,18 @@ export default function FlightsPage() {
     const loop = (now: number) => {
       const dt = (now - last) / 1000
       last = now
-      // advance cycles per second (increase for faster animation)
-      setTime((t) => (t + dt * 0.12) % 1)
+      const SPEED = 0.12 // cycles per second
+      const flights = dataRef.current?.flights ?? []
+      if (flights.length) {
+        for (const f of flights) {
+          const cur = progressRef.current.get(f.id) ?? Math.random() // desync starts
+          let next = cur + dt * SPEED
+          if (next >= 1) next = next % 1 // restart immediately after landing
+          progressRef.current.set(f.id, next)
+        }
+      }
+      tickRef.current += 1
+      forceTick(t => t + 1)
       rafRef.current = requestAnimationFrame(loop)
     }
     rafRef.current = requestAnimationFrame(loop)
@@ -72,7 +86,8 @@ export default function FlightsPage() {
       const total = Number.isFinite(last.distanceKm as number)
         ? ((last.distanceKm as number) > 0 ? (last.distanceKm as number) : pts.length - 1)
         : pts.length - 1
-      const pathT = total > 0 ? time * total : time * (pts.length - 1)
+      const phase = progressRef.current.get(f.id) ?? 0
+      const pathT = total > 0 ? phase * total : phase * (pts.length - 1)
       const idx = Math.floor(pathT)
       const frac = pathT - idx
       const a = pts[Math.max(0, Math.min(idx, pts.length - 1))]
@@ -94,10 +109,10 @@ export default function FlightsPage() {
         getPosition: (d) => d.position,
         getOrientation: () => [0, 0, 90],
         getFillColor: () => [255, 255, 255],
-        updateTriggers: { getPosition: [time] },
+        updateTriggers: { getPosition: [tickRef.current] },
       }),
     ]
-  }, [data, time])
+  }, [data])
 
   if (!data || !viewState) return <div className="h-full w-full" />
 
