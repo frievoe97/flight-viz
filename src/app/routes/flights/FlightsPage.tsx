@@ -66,7 +66,7 @@ export default function FlightsPage() {
         }
       }
       tickRef.current += 1
-      forceTick(t => t + 1)
+      forceTick((t) => t + 1)
       rafRef.current = requestAnimationFrame(loop)
     }
     rafRef.current = requestAnimationFrame(loop)
@@ -84,7 +84,9 @@ export default function FlightsPage() {
       // total distance by last point's distanceKm or points length
       const last = pts[pts.length - 1]
       const total = Number.isFinite(last.distanceKm as number)
-        ? ((last.distanceKm as number) > 0 ? (last.distanceKm as number) : pts.length - 1)
+        ? (last.distanceKm as number) > 0
+          ? (last.distanceKm as number)
+          : pts.length - 1
         : pts.length - 1
       const phase = progressRef.current.get(f.id) ?? 0
       const pathT = total > 0 ? phase * total : phase * (pts.length - 1)
@@ -92,9 +94,10 @@ export default function FlightsPage() {
       const frac = pathT - idx
       const a = pts[Math.max(0, Math.min(idx, pts.length - 1))]
       const b = pts[Math.max(0, Math.min(idx + 1, pts.length - 1))]
-      const lon = (a.position[0] + (b.position[0] - a.position[0]) * frac)
-      const lat = (a.position[1] + (b.position[1] - a.position[1]) * frac)
-      const alt = ((a.altitudeMeters ?? 0) + ((b.altitudeMeters ?? 0) - (a.altitudeMeters ?? 0)) * frac)
+      const lon = a.position[0] + (b.position[0] - a.position[0]) * frac
+      const lat = a.position[1] + (b.position[1] - a.position[1]) * frac
+      const alt =
+        (a.altitudeMeters ?? 0) + ((b.altitudeMeters ?? 0) - (a.altitudeMeters ?? 0)) * frac
       return { id: f.id, name: f.name, position: [lon, lat, alt] }
     })
 
@@ -105,7 +108,7 @@ export default function FlightsPage() {
         pickable: true,
         scenegraph: MODEL_URL,
         _animations: ANIMATIONS,
-        sizeScale: 60,
+        sizeScale: 120,
         getPosition: (d) => d.position,
         getOrientation: () => [0, 0, 90],
         getFillColor: () => [255, 255, 255],
@@ -125,7 +128,7 @@ export default function FlightsPage() {
   }
 
   return (
-    <div className="h-full w-full" style={{ backgroundColor: 'var(--map-land)' }}>
+    <div className="relative h-full w-full" style={{ backgroundColor: 'var(--map-land)' }}>
       <DeckGL
         style={deckStyle}
         controller
@@ -147,7 +150,12 @@ export default function FlightsPage() {
         layers={layers}
         getTooltip={({ object }) => (object ? (object as any).name : null)}
       >
-        <Map mapLib={maplibregl} mapStyle={MAP_STYLE} attributionControl={false} interactive={false} />
+        <Map
+          mapLib={maplibregl}
+          mapStyle={MAP_STYLE}
+          attributionControl={false}
+          interactive={false}
+        />
       </DeckGL>
       <div className="absolute top-3 left-3">
         <button
