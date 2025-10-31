@@ -5,6 +5,7 @@ import type { Map as MaplibreMap, LngLatBoundsLike, PaddingOptions } from 'mapli
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { Deck, Layer, PickingInfo } from '@deck.gl/core'
+import { Link } from 'react-router-dom'
 import { getFlightData, type Flight, type FlightSegment } from '@/data'
 import { MAP_STYLE } from '@/lib/map/deckConfig'
 import FlightChart from './FlightChart'
@@ -488,11 +489,21 @@ export default function MapPage() {
         >
           <NavigationControl
             key={projectionMode}
-            style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}
+            style={{ position: 'absolute', top: '4rem', right: '0.75rem' }}
             showCompass={projectionMode !== 'globe'}
             visualizePitch={projectionMode !== 'globe'}
           />
         </MapGL>
+
+        <div className="absolute top-3 right-3 z-10">
+          <Link
+            to="/stats"
+            className="controls-btn rounded-md px-4 py-2 text-sm font-medium uppercase tracking-wide"
+            style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)' }}
+          >
+            Statistiken
+          </Link>
+        </div>
 
         <div className="absolute top-3 left-3 flex flex-col gap-2 max-w-xs">
           <div
