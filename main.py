@@ -13,7 +13,7 @@ from dateutil import tz
 
 
 # ===================== Konfiguration =====================
-urls = ['https://www.flightaware.com/live/flight/UNI132/history/20251029/1752Z/EGCC/EGGW/tracklog']
+urls = ['https://www.flightaware.com/live/flight/UNI132/history/20251029/1752Z/EGCC/EGGW/tracklog', "https://www.flightaware.com/live/flight/UNI132/history/20251027/0942Z/EDDK/L%2038.21436%2013.20616/tracklog"]
 
 
 

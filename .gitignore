@@ -21,6 +21,3 @@ dist/
 # IDE / Tooling
 .idea/
 .vscode/
-
-# Local exports
-export/
