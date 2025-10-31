@@ -16,15 +16,26 @@ export function useTrailsOverlay({
   isActive,
   speedMultiplier,
   trailLengthSeconds,
+  heightScale = 3, // ← Faktor für die Z-Skalierung
 }: {
   trips: Trip[]
   isActive: boolean
   speedMultiplier: number
   trailLengthSeconds: number
+  heightScale?: number
 }) {
   const timeRef = useRef<Map<string, number>>(new Map())
   const rafRef = useRef(0)
   const [tick, setTick] = useState(0)
+
+  // Z-Werte vorab skaliert in die Daten mappen → getPath bleibt typsicher
+  const scaledTrips = useMemo(() => {
+    if (!trips.length) return trips
+    return trips.map((t) => ({
+      ...t,
+      path: t.path.map(([x, y, z]) => [x, y, z * heightScale] as [number, number, number]),
+    }))
+  }, [trips, heightScale])
 
   useEffect(() => {
     if (!isActive || !trips.length) return () => undefined
@@ -46,15 +57,15 @@ export function useTrailsOverlay({
   }, [isActive, trips, speedMultiplier])
 
   return useMemo(() => {
-    if (!isActive || !trips.length) return [] as TripsLayer<Trip>[]
+    if (!isActive || !scaledTrips.length) return [] as TripsLayer<Trip>[]
     void tick
-    return trips.map(
+    return scaledTrips.map(
       (trip) =>
         new TripsLayer<Trip>({
           id: `trail-${trip.id}`,
           data: [trip],
           pickable: false,
-          getPath: (d) => d.path,
+          getPath: (d) => d.path, // typsicher, keine Map-Operation im Accessor
           getTimestamps: (d) => d.timestamps,
           currentTime: timeRef.current.get(trip.id) ?? 0,
           widthUnits: 'meters',
@@ -67,5 +78,5 @@ export function useTrailsOverlay({
           getColor: () => colors.flight.high,
         })
     )
-  }, [isActive, trips, trailLengthSeconds, tick])
+  }, [isActive, scaledTrips, trailLengthSeconds, tick])
 }
