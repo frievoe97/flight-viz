@@ -13,8 +13,12 @@ const ANIMATIONS: ScenegraphLayerProps['_animations'] = {
 const BASE_SPEED = 0.004
 const SMOOTH = 0.35
 const FLIGHT_FADE_WINDOW = 0.05
-const TARGET_FPS = 10
+const TARGET_FPS = 30
 const FRAME_INTERVAL = 1 / TARGET_FPS
+const MIN_ZOOM_FOR_SCALE = 3
+const MAX_ZOOM_FOR_SCALE = 10
+const MIN_MODEL_SCALE = 1000
+const MAX_MODEL_SCALE = 100
 
 type FlightLite = Pick<Flight, 'id' | 'name' | 'points'>
 type ProjectionMode = 'globe' | 'mercator'
@@ -77,6 +81,8 @@ const lerpVec3 = (
   t: number
 ): [number, number, number] => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
 
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+
 /* -------------------- Main hook -------------------- */
 
 export function useAnimatedFlightsOverlay({
@@ -84,11 +90,13 @@ export function useAnimatedFlightsOverlay({
   isActive,
   speedMultiplier,
   projectionMode,
+  zoom,
 }: {
   flights: FlightLite[]
   isActive: boolean
   speedMultiplier: number
   projectionMode: ProjectionMode
+  zoom: number
 }) {
   const progressRef = useRef<Map<string, number>>(new Map())
   const lastStateRef = useRef<Map<string, StateEntry>>(new Map())
@@ -150,6 +158,13 @@ export function useAnimatedFlightsOverlay({
 
   const layer = useMemo(() => {
     if (!isActive || !flights.length) return null
+
+    const clampedZoom = clamp(zoom, MIN_ZOOM_FOR_SCALE, MAX_ZOOM_FOR_SCALE)
+    const zoomSpan = Math.max(0.0001, MAX_ZOOM_FOR_SCALE - MIN_ZOOM_FOR_SCALE)
+    const zoomProgress = (clampedZoom - MIN_ZOOM_FOR_SCALE) / zoomSpan
+    const scaleFactor = Math.pow(MAX_MODEL_SCALE / MIN_MODEL_SCALE, zoomProgress)
+    const modelScale = MIN_MODEL_SCALE * Math.max(0.0001, scaleFactor)
+    const scaleVector: [number, number, number] = [modelScale, modelScale, modelScale]
 
     const entries: LayerEntry[] = flights.map((f) => {
       const pts = f.points
@@ -219,7 +234,8 @@ export function useAnimatedFlightsOverlay({
       pickable: true,
       scenegraph: MODEL_URL,
       _animations: ANIMATIONS,
-      sizeScale: 400,
+      sizeScale: 1,
+      getScale: () => scaleVector,
       getPosition: (d) => d.position,
       getOrientation: (d) => d.orientation,
       getColor: (d) => [255, 255, 255, Math.round(d.opacity * 255)],
@@ -227,9 +243,10 @@ export function useAnimatedFlightsOverlay({
         getPosition: [tick],
         getOrientation: [tick],
         getColor: [tick],
+        getScale: [modelScale],
       },
     })
-  }, [isActive, flights, tick, projectionMode])
+  }, [isActive, flights, tick, projectionMode, zoom])
 
   return layer
 }

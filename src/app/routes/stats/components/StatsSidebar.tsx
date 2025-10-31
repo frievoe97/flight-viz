@@ -71,10 +71,16 @@ export function StatsSidebar({
           </p>
         </div>
         <nav className="grid grid-cols-2 gap-2">
-          <SidebarButton active={activeView === 'overview'} onClick={() => onActiveViewChange('overview')}>
+          <SidebarButton
+            active={activeView === 'overview'}
+            onClick={() => onActiveViewChange('overview')}
+          >
             All Flights
           </SidebarButton>
-          <SidebarButton active={activeView === 'flight'} onClick={() => onActiveViewChange('flight')}>
+          <SidebarButton
+            active={activeView === 'flight'}
+            onClick={() => onActiveViewChange('flight')}
+          >
             Single Flight
           </SidebarButton>
         </nav>
@@ -132,8 +138,8 @@ export function StatsSidebar({
 
       <div className="mt-auto space-y-3 text-xs text-white/70">
         <p>
-          Filters apply to both the overview metrics and the flight selector so you always explore
-          a consistent subset of the dataset.
+          Filters apply to both the overview metrics and the flight selector so you always explore a
+          consistent subset of the dataset.
         </p>
         <Link
           to="/map"
