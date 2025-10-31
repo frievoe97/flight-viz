@@ -1,0 +1,53 @@
+{
+  "start_time_berlin": "27.10.2025 10:36:54",
+  "end_time_berlin": "27.10.2025 12:29:32",
+  "duration_seconds": 6758,
+  "track_length_km": 1564.617,
+  "bbox": {
+    "min_lat": 38.2144,
+    "min_lon": 7.1059,
+    "max_lat": 50.9726,
+    "max_lon": 13.4451
+  },
+  "speed_kts_min": 111,
+  "speed_kts_max": 531,
+  "speed_kts_avg": 437.0,
+  "speed_mph_min": 128,
+  "speed_mph_max": 611,
+  "speed_mph_avg": 502.8,
+  "altitude_ft_min": 650,
+  "altitude_ft_max": 41025,
+  "altitude_ft_avg": 30594,
+  "vertical_rate_fpm_min": -2525.0,
+  "vertical_rate_fpm_max": 4068.0,
+  "vertical_rate_fpm_avg": 133.7,
+  "points": 242,
+  "callsign": "UNI134",
+  "aircraft_registration": "D-CSOS",
+  "aircraft_hex": "3CF106",
+  "source_url": "https://www.flightaware.com/live/flight/UNI132/history/20251027/0942Z/EDDK/L%2038.21436%2013.20616/tracklog",
+  "reporting_facility_departure": "FlightAware ADS-B(CGN / EDDK)",
+  "reporting_facility_arrival": "FlightAware ADS-B(LICP)",
+  "departure_airport": {
+    "icao": "EDDK",
+    "iata": "CGN",
+    "name": "Cologne Bonn Airport",
+    "city": "Cologne",
+    "subd": "Nordrhein-Westfalen",
+    "country": "DE",
+    "elevation": 302.0,
+    "lat": 50.8659,
+    "lon": 7.14274
+  },
+  "arrival_airport": {
+    "icao": "LICP",
+    "iata": null,
+    "name": "Palermo / Bocca Di Falco Airport",
+    "city": "Palermo",
+    "subd": "Sicily",
+    "country": "IT",
+    "elevation": 345.0,
+    "lat": 38.1108,
+    "lon": 13.3133
+  }
+}

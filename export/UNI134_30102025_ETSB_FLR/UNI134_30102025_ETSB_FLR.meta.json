@@ -1,0 +1,53 @@
+{
+  "start_time_berlin": "30.10.2025 09:39:22",
+  "end_time_berlin": "30.10.2025 10:53:37",
+  "duration_seconds": 4455,
+  "track_length_km": 925.897,
+  "bbox": {
+    "min_lat": 43.6222,
+    "min_lon": 7.0541,
+    "max_lat": 50.8603,
+    "max_lon": 11.2251
+  },
+  "speed_kts_min": 133,
+  "speed_kts_max": 535,
+  "speed_kts_avg": 389.9,
+  "speed_mph_min": 153,
+  "speed_mph_max": 616,
+  "speed_mph_avg": 448.7,
+  "altitude_ft_min": 275,
+  "altitude_ft_max": 41025,
+  "altitude_ft_avg": 25811,
+  "vertical_rate_fpm_min": -2525.0,
+  "vertical_rate_fpm_max": 3591.0,
+  "vertical_rate_fpm_avg": -11.4,
+  "points": 160,
+  "callsign": "UNI134",
+  "aircraft_registration": "D-CSOS",
+  "aircraft_hex": "3CF106",
+  "source_url": "https://www.flightaware.com/live/flight/UNI134/history/20251030/0844Z/EDDK/LIRQ/tracklog",
+  "reporting_facility_departure": "FlightAware ADS-B(ETSB)",
+  "reporting_facility_arrival": "FlightAware ADS-B(FLR / LIRQ)",
+  "departure_airport": {
+    "icao": "ETSB",
+    "iata": null,
+    "name": "Buchel Airport",
+    "city": "",
+    "subd": "Rheinland-Pfalz",
+    "country": "DE",
+    "elevation": 1568.0,
+    "lat": 50.1738,
+    "lon": 7.06333
+  },
+  "arrival_airport": {
+    "icao": "LIRQ",
+    "iata": "FLR",
+    "name": "Firenze / Peretola Airport",
+    "city": "Firenze",
+    "subd": "Tuscany",
+    "country": "IT",
+    "elevation": 142.0,
+    "lat": 43.81,
+    "lon": 11.2051
+  }
+}

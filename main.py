@@ -1,24 +1,32 @@
+import json
 import os
 import re
-import json
-from math import radians, sin, cos, asin, sqrt
+import shutil
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from math import asin, cos, radians, sin, sqrt
+from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urlparse, unquote
 
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 from dateutil import tz
+from zoneinfo import ZoneInfo
+
+try:
+    from airportsdata import load as load_airports
+except ImportError as exc:  # pragma: no cover - fail fast if dependency missing
+    raise SystemExit(
+        "The 'airportsdata' package is required. Install it via 'pip install airportsdata'."
+    ) from exc
 
 
 # ===================== Konfiguration =====================
-urls = ['https://www.flightaware.com/live/flight/UNI132/history/20251029/1752Z/EGCC/EGGW/tracklog', "https://www.flightaware.com/live/flight/UNI132/history/20251027/0942Z/EDDK/L%2038.21436%2013.20616/tracklog"]
-
-
-
-TARGET_TZ = ZoneInfo("Europe/Berlin")  # Ziel: Berliner Zeit
+TARGET_TZ = ZoneInfo("Europe/Berlin")
 EXPORT_BASE = "./export"
+URLS_CSV = "flights.csv"
+DOWNLOAD_LOG_PATH = os.path.join(EXPORT_BASE, "downloads.json")
+CACHE_DIR = os.path.join(EXPORT_BASE, "_cache")
 
 # Abkürzung -> IANA-TZ (stabil & eindeutig)
 ABBR_TO_IANA = {
@@ -39,8 +47,12 @@ ABBR_TO_IANA = {
     "EET": "Europe/Helsinki",
     "EEST": "Europe/Helsinki",
     "UTC": "UTC",
-    "Z":   "UTC",
+    "Z": "UTC",
 }
+
+# Flughafendaten vorab laden
+AIRPORTS_ICAO = load_airports("ICAO")
+AIRPORTS_IATA = load_airports("IATA")
 
 
 # ===================== Hilfsfunktionen =====================
@@ -56,14 +68,14 @@ def visible_text(cell) -> str:
 
 def parse_url_date(url: str) -> datetime:
     """YYYYMMDD aus der URL (/history/20251027/...) extrahieren; Fallback: UTC-heute."""
-    m = re.search(r"/history/(\d{8})/", url)
-    return datetime.strptime(m.group(1), "%Y%m%d") if m else datetime.utcnow()
+    match = re.search(r"/history/(\d{8})/", url)
+    return datetime.strptime(match.group(1), "%Y%m%d") if match else datetime.utcnow()
 
 
-def find_col(raw_headers, prefix: str) -> int | None:
+def find_col(raw_headers, prefix: str) -> Optional[int]:
     """Index der ersten Header-Spalte, deren Text mit prefix beginnt (z. B. 'Time')."""
-    for i, h in enumerate(raw_headers):
-        if h.strip().startswith(prefix):
+    for i, header in enumerate(raw_headers):
+        if header.strip().startswith(prefix):
             return i
     return None
 
@@ -71,11 +83,11 @@ def find_col(raw_headers, prefix: str) -> int | None:
 def resolve_source_tz_from_header(raw_headers):
     """Liest 'Time (XXX)' aus den rohen Headern und liefert passende Zeitzone (dateutil)."""
     label = None
-    for h in raw_headers:
-        if h.strip().startswith("Time"):
-            m = re.search(r"\(([^)]+)\)", h)
-            if m:
-                label = m.group(1).strip().upper()
+    for header in raw_headers:
+        if header.strip().startswith("Time"):
+            match = re.search(r"\(([^)]+)\)", header)
+            if match:
+                label = match.group(1).strip().upper()
             break
     name = ABBR_TO_IANA.get(label, "UTC")
     return tz.gettz(name)
@@ -83,8 +95,8 @@ def resolve_source_tz_from_header(raw_headers):
 
 def clean_course(value: str) -> str:
     """Nur Gradzahl: '↙ 222°' -> '222'."""
-    m = re.search(r"(-?\d+)\s*°", value)
-    return m.group(1) if m else value.strip()
+    match = re.search(r"(-?\d+)\s*°", value)
+    return match.group(1) if match else value.strip()
 
 
 def clean_integer_like(value: str) -> str:
@@ -99,14 +111,14 @@ def clean_rate(value: str) -> str:
     - Sonst: Punkte als Tausender entfernen, Komma -> Punkt (dezimal).
     Ergebnis: String mit Dezimalpunkt.
     """
-    v = value.strip()
-    if not v:
-        return v
-    if v.count(",") == 1 and re.search(r",\d{3}$", v):
-        return v.replace(",", "")
-    v = v.replace(".", "")
-    v = v.replace(",", ".")
-    return v
+    cleaned = value.strip()
+    if not cleaned:
+        return cleaned
+    if cleaned.count(",") == 1 and re.search(r",\d{3}$", cleaned):
+        return cleaned.replace(",", "")
+    cleaned = cleaned.replace(".", "")
+    cleaned = cleaned.replace(",", ".")
+    return cleaned
 
 
 def rename_headers(raw_headers: list[str]) -> list[str]:
@@ -123,11 +135,11 @@ def rename_headers(raw_headers: list[str]) -> list[str]:
         "Rate": "vertical_rate_fpm",
         "Reporting Facility": "reporting_facility",
     }
-    out = []
-    for h in raw_headers:
-        base = h.split("(")[0].strip() if "(" in h and ")" in h else h.strip()
-        out.append(mapping.get(base, re.sub(r"\W+", "_", base.lower()).strip("_")))
-    return out
+    result = []
+    for header in raw_headers:
+        base = header.split("(")[0].strip() if "(" in header and ")" in header else header.strip()
+        result.append(mapping.get(base, re.sub(r"\W+", "_", base.lower()).strip("_")))
+    return result
 
 
 def slug_from_url(url: str) -> str:
@@ -138,26 +150,24 @@ def slug_from_url(url: str) -> str:
       UNI132_20251027_1250Z
       UNI132_20251027_0942Z_EDDK_L_38.21436_13.20616
     """
-    path = unquote(urlparse(url).path)  # dekodiert %20 etc.
-    parts = [p for p in path.split("/") if p]
+    path = unquote(urlparse(url).path)
+    parts = [part for part in path.split("/") if part]
 
-    # flight
     try:
-        i_live = parts.index("live")
-        flight = parts[i_live + 2] if parts[i_live + 1] == "flight" else "FLIGHT"
+        live_index = parts.index("live")
+        flight = parts[live_index + 2] if parts[live_index + 1] == "flight" else "FLIGHT"
     except ValueError:
         flight = "FLIGHT"
 
-    # history block
     try:
-        i_hist = parts.index("history")
-        date_str = parts[i_hist + 1] if len(parts) > i_hist + 1 else "DATE"
-        timez   = parts[i_hist + 2] if len(parts) > i_hist + 2 else "TIMEZ"
+        hist_index = parts.index("history")
+        date_str = parts[hist_index + 1] if len(parts) > hist_index + 1 else "DATE"
+        timez = parts[hist_index + 2] if len(parts) > hist_index + 2 else "TIMEZ"
         optionals = []
-        for p in parts[i_hist + 3:]:
-            if p == "tracklog":
+        for part in parts[hist_index + 3 :]:
+            if part == "tracklog":
                 break
-            optionals.append(p)
+            optionals.append(part)
     except ValueError:
         date_str, timez, optionals = "DATE", "TIMEZ", []
 
@@ -168,42 +178,170 @@ def slug_from_url(url: str) -> str:
 
 def haversine_km(lat1, lon1, lat2, lon2) -> float:
     """Großkreisdistanz zwischen zwei WGS84-Punkten in Kilometern."""
-    # Koordinaten in Radiant
     la1, lo1, la2, lo2 = map(radians, [lat1, lon1, lat2, lon2])
     dlat = la2 - la1
     dlon = lo2 - lo1
     a = sin(dlat / 2) ** 2 + cos(la1) * cos(la2) * sin(dlon / 2) ** 2
     c = 2 * asin(sqrt(a))
-    R = 6371.0088  # mittlerer Erdradius in km
-    return R * c
+    earth_radius_km = 6371.0088
+    return earth_radius_km * c
 
 
-def compute_meta(df: pd.DataFrame) -> dict:
+def load_flight_plan(csv_path: str) -> list[Dict[str, Optional[str]]]:
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"Flight definition CSV '{csv_path}' not found.")
+
+    df = pd.read_csv(csv_path)
+    df.columns = [col.strip().lower() for col in df.columns]
+
+    rename_map = {
+        "rufzeichen": "callsign",
+        "flugzeug": "aircraft",
+        "flugzeugnummer": "aircraft_hex",
+    }
+    df = df.rename(columns=rename_map)
+
+    required = {"url", "callsign", "aircraft", "aircraft_hex"}
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(
+            f"Flight definition CSV is missing required columns: {', '.join(sorted(missing))}"
+        )
+
+    flights: list[Dict[str, Optional[str]]] = []
+    for row in df.to_dict("records"):
+        flights.append(
+            {
+                "url": str(row.get("url", "")).strip() or None,
+                "callsign": str(row.get("callsign", "")).strip() or None,
+                "aircraft": str(row.get("aircraft", "")).strip() or None,
+                "aircraft_hex": str(row.get("aircraft_hex", "")).strip() or None,
+            }
+        )
+    return flights
+
+
+def load_download_log(path: str) -> Dict[str, str]:
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            return {str(key): str(value) for key, value in data.items()}
+        except (json.JSONDecodeError, OSError):
+            return {}
+    return {}
+
+
+def save_download_log(path: str, payload: Dict[str, str]) -> None:
+    ensure_dir(os.path.dirname(path))
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+
+
+def ensure_html(url: str, downloads: Dict[str, str]) -> Optional[str]:
+    existing_path = downloads.get(url)
+    if existing_path and os.path.exists(existing_path):
+        return existing_path
+
+    ensure_dir(CACHE_DIR)
+    target_path = os.path.join(CACHE_DIR, f"{slug_from_url(url)}.html")
+    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    if resp.status_code != 200:
+        print(f"Fehler {resp.status_code} bei {url}")
+        return None
+    with open(target_path, "w", encoding="utf-8") as handle:
+        handle.write(resp.text)
+    downloads[url] = target_path
+    save_download_log(DOWNLOAD_LOG_PATH, downloads)
+    return target_path
+
+
+def lookup_airport(code: str) -> Optional[Dict[str, Any]]:
+    if not code:
+        return None
+    code_upper = code.upper()
+    return AIRPORTS_ICAO.get(code_upper) or AIRPORTS_IATA.get(code_upper)
+
+
+def normalize_airport_record(record: Optional[Dict[str, Any]], code: str) -> Dict[str, Any]:
+    record = record or {}
+    code_upper = code.upper()
+    result = {
+        "icao": record.get("icao") or (code_upper if len(code_upper) == 4 else None),
+        "iata": record.get("iata") or (code_upper if len(code_upper) == 3 else None),
+        "name": record.get("name"),
+        "city": record.get("city"),
+        "subd": record.get("subd"),
+        "country": record.get("country"),
+        "elevation": record.get("elevation"),
+        "lat": record.get("lat"),
+        "lon": record.get("lon"),
+    }
+    return result
+
+
+def extract_airport_from_facility(facility: Optional[str]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    if not facility:
+        return None, None
+
+    match = re.search(r"\(([^)]+)\)", facility)
+    if not match:
+        return None, None
+
+    raw = match.group(1)
+    candidates = [
+        re.sub(r"\s+", "", candidate.upper())
+        for candidate in re.split(r"[\\/|]", raw)
+        if candidate.strip()
+    ]
+    for candidate in candidates:
+        record = lookup_airport(candidate)
+        if record:
+            return normalize_airport_record(record, candidate), candidate
+
+    if candidates:
+        fallback = candidates[0]
+        return normalize_airport_record(None, fallback), fallback
+
+    return None, None
+
+
+def select_display_code(info: Optional[Dict[str, Any]], fallback: Optional[str]) -> str:
+    if info and info.get("iata"):
+        return re.sub(r"[^0-9A-Z]", "", info["iata"].upper()) or "UNK"
+    if info and info.get("icao"):
+        return re.sub(r"[^0-9A-Z]", "", info["icao"].upper()) or "UNK"
+    if fallback:
+        return re.sub(r"[^0-9A-Z]", "", fallback.upper()) or "UNK"
+    return "UNK"
+
+
+def compute_meta(df: pd.DataFrame, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Meta-Statistiken aus dem DataFrame berechnen."""
-    meta = {}
+    meta: Dict[str, Any] = {}
 
-    # Zeitspalte finden und in datetime parsen
-    time_col = next((c for c in df.columns if c.startswith("time_")), None)
+    time_col = next((col for col in df.columns if col.startswith("time_")), None)
     if time_col:
-        t = pd.to_datetime(df[time_col], format="%d.%m.%Y %H:%M:%S", errors="coerce")
-        t_valid = t.dropna()
-        if not t_valid.empty:
-            meta["start_time_berlin"] = t_valid.iloc[0].strftime("%d.%m.%Y %H:%M:%S")
-            meta["end_time_berlin"] = t_valid.iloc[-1].strftime("%d.%m.%Y %H:%M:%S")
-            meta["duration_seconds"] = int((t_valid.iloc[-1] - t_valid.iloc[0]).total_seconds())
+        timestamps = pd.to_datetime(df[time_col], format="%d.%m.%Y %H:%M:%S", errors="coerce")
+        valid = timestamps.dropna()
+        if not valid.empty:
+            meta["start_time_berlin"] = valid.iloc[0].strftime("%d.%m.%Y %H:%M:%S")
+            meta["end_time_berlin"] = valid.iloc[-1].strftime("%d.%m.%Y %H:%M:%S")
+            meta["duration_seconds"] = int((valid.iloc[-1] - valid.iloc[0]).total_seconds())
         else:
             meta["start_time_berlin"] = meta["end_time_berlin"] = None
             meta["duration_seconds"] = None
 
-    # Koordinaten & Länge
     try:
         lats = df["latitude"].astype(float).tolist()
         lons = df["longitude"].astype(float).tolist()
-        segs = [
-            haversine_km(lats[i], lons[i], lats[i + 1], lons[i + 1])
-            for i in range(len(lats) - 1)
-        ] if len(lats) > 1 else []
-        meta["track_length_km"] = round(sum(segs), 3)
+        if len(lats) > 1:
+            segments = [
+                haversine_km(lats[i], lons[i], lats[i + 1], lons[i + 1]) for i in range(len(lats) - 1)
+            ]
+        else:
+            segments = []
+        meta["track_length_km"] = round(sum(segments), 3)
         if lats and lons:
             meta["bbox"] = {
                 "min_lat": round(min(lats), 6),
@@ -214,46 +352,48 @@ def compute_meta(df: pd.DataFrame) -> dict:
     except Exception:
         meta["track_length_km"] = None
 
-    # Geschwindigkeiten / Höhe / Steigrate
-    def _safe_num(series, cast=float):
-        vals = []
-        for x in series.fillna("").tolist():
+    def _safe_num(series, caster=float):
+        values = []
+        for item in series.fillna("").tolist():
             try:
-                vals.append(cast(str(x)))
+                values.append(caster(str(item)))
             except Exception:
-                pass
-        return vals
+                continue
+        return values
 
     if "speed_kts" in df.columns:
-        v = _safe_num(df["speed_kts"], int)
-        if v:
-            meta["speed_kts_min"] = int(min(v))
-            meta["speed_kts_max"] = int(max(v))
-            meta["speed_kts_avg"] = round(sum(v)/len(v), 1)
+        speed = _safe_num(df["speed_kts"], int)
+        if speed:
+            meta["speed_kts_min"] = int(min(speed))
+            meta["speed_kts_max"] = int(max(speed))
+            meta["speed_kts_avg"] = round(sum(speed) / len(speed), 1)
 
     if "speed_mph" in df.columns:
-        v = _safe_num(df["speed_mph"], int)
-        if v:
-            meta["speed_mph_min"] = int(min(v))
-            meta["speed_mph_max"] = int(max(v))
-            meta["speed_mph_avg"] = round(sum(v)/len(v), 1)
+        speed = _safe_num(df["speed_mph"], int)
+        if speed:
+            meta["speed_mph_min"] = int(min(speed))
+            meta["speed_mph_max"] = int(max(speed))
+            meta["speed_mph_avg"] = round(sum(speed) / len(speed), 1)
 
     if "altitude_ft" in df.columns:
-        v = _safe_num(df["altitude_ft"], int)
-        if v:
-            meta["altitude_ft_min"] = int(min(v))
-            meta["altitude_ft_max"] = int(max(v))
-            meta["altitude_ft_avg"] = int(round(sum(v)/len(v)))
+        altitude = _safe_num(df["altitude_ft"], int)
+        if altitude:
+            meta["altitude_ft_min"] = int(min(altitude))
+            meta["altitude_ft_max"] = int(max(altitude))
+            meta["altitude_ft_avg"] = int(round(sum(altitude) / len(altitude)))
 
     if "vertical_rate_fpm" in df.columns:
-        # Rate ist als String mit Punkt als Dezimaltrennzeichen
-        v = _safe_num(df["vertical_rate_fpm"], float)
-        if v:
-            meta["vertical_rate_fpm_min"] = round(min(v), 1)
-            meta["vertical_rate_fpm_max"] = round(max(v), 1)
-            meta["vertical_rate_fpm_avg"] = round(sum(v)/len(v), 1)
+        rate = _safe_num(df["vertical_rate_fpm"], float)
+        if rate:
+            meta["vertical_rate_fpm_min"] = round(min(rate), 1)
+            meta["vertical_rate_fpm_max"] = round(max(rate), 1)
+            meta["vertical_rate_fpm_avg"] = round(sum(rate) / len(rate), 1)
 
     meta["points"] = int(len(df))
+
+    if extra:
+        meta.update(extra)
+
     return meta
 
 
@@ -266,13 +406,12 @@ def df_to_geojson(df: pd.DataFrame) -> dict:
     coords = []
     lats = df["latitude"].tolist()
     lons = df["longitude"].tolist()
-    for la, lo in zip(lats, lons):
+    for lat, lon in zip(lats, lons):
         try:
-            coords.append([float(lo), float(la)])  # GeoJSON: [lon, lat]
+            coords.append([float(lon), float(lat)])
         except Exception:
-            pass
+            continue
 
-    # Properties: alle Spalten als Arrays (Strings bleiben Strings)
     props = {col: df[col].tolist() for col in df.columns if col not in ("latitude", "longitude")}
 
     feature = {
@@ -283,127 +422,169 @@ def df_to_geojson(df: pd.DataFrame) -> dict:
     return {"type": "FeatureCollection", "features": [feature]}
 
 
-# ===================== Hauptlogik =====================
-for url in urls:
-    # Ordner vorbereiten
-    base_name = slug_from_url(url)
-    flight_dir = os.path.join(EXPORT_BASE, base_name)
-    ensure_dir(flight_dir)
+def main() -> None:
+    ensure_dir(EXPORT_BASE)
+    flights = load_flight_plan(URLS_CSV)
+    downloads = load_download_log(DOWNLOAD_LOG_PATH)
 
-    # HTML laden & speichern
-    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-    if resp.status_code != 200:
-        print(f"Fehler {resp.status_code} bei {url}")
-        continue
-    html_path = os.path.join(flight_dir, f"{base_name}.html")
-    with open(html_path, "w", encoding="utf-8") as f:
-        f.write(resp.text)
-
-    soup = BeautifulSoup(resp.text, "html.parser")
-    table = soup.find("table", id="tracklogTable")
-    if not table:
-        print(f"Warnung: Keine Tabelle gefunden für {url}")
-        continue
-
-    # Header (sichtbar)
-    header_row = table.find("tr")
-    raw_headers = [visible_text(th) for th in header_row.find_all("th")] if header_row else []
-    if not raw_headers:
-        print(f"Warnung: Kein Header gefunden für {url}")
-        continue
-
-    # Quell-TZ & Spaltennamen
-    src_tz = resolve_source_tz_from_header(raw_headers)
-    cols = rename_headers(raw_headers)
-
-    # Indizes
-    time_i   = find_col(raw_headers, "Time")
-    course_i = find_col(raw_headers, "Course")
-    feet_i   = find_col(raw_headers, "feet")
-    rate_i   = find_col(raw_headers, "Rate")
-    kts_i    = find_col(raw_headers, "kts")
-    mph_i    = find_col(raw_headers, "mph")
-
-    date_from_url = parse_url_date(url)
-    records = []
-
-    # Datenzeilen parsen
-    for tr in table.find_all("tr"):
-        if "flight_event" in tr.get("class", []):
-            continue
-        tds = tr.find_all("td")
-        if not tds:
+    for flight in flights:
+        url = flight.get("url")
+        if not url:
+            print("Überspringe Eintrag ohne URL.")
             continue
 
-        row = [visible_text(td) for td in tds]
-        if len(row) != len(raw_headers):
+        html_path = ensure_html(url, downloads)
+        if not html_path:
             continue
 
-        cleaned = row[:]
+        with open(html_path, "r", encoding="utf-8") as handle:
+            html_content = handle.read()
 
-        # Zeit -> nach Berlin; Format: dd.mm.yyyy HH:MM:SS (24h)
-        if time_i is not None:
-            try:
-                t_naive = datetime.strptime(cleaned[time_i], "%a %I:%M:%S %p")
-                t_src = datetime(
-                    date_from_url.year, date_from_url.month, date_from_url.day,
-                    t_naive.hour, t_naive.minute, t_naive.second,
-                    tzinfo=src_tz
-                )
-                t_local = t_src.astimezone(TARGET_TZ)
-                cleaned[time_i] = t_local.strftime("%d.%m.%Y %H:%M:%S")
-            except Exception:
-                # Rohwert stehen lassen, falls Parsing scheitert
-                pass
+        soup = BeautifulSoup(html_content, "html.parser")
+        table = soup.find("table", id="tracklogTable")
+        if not table:
+            print(f"Warnung: Keine Tabelle gefunden für {url}")
+            continue
 
-        # Course: nur Gradzahl
-        if course_i is not None:
-            cleaned[course_i] = clean_course(cleaned[course_i])
+        header_row = table.find("tr")
+        raw_headers = [visible_text(th) for th in header_row.find_all("th")] if header_row else []
+        if not raw_headers:
+            print(f"Warnung: Kein Header gefunden für {url}")
+            continue
 
-        # feet/kts/mph: nur Ziffern
-        if feet_i is not None:
-            cleaned[feet_i] = clean_integer_like(cleaned[feet_i])
-        for i in (kts_i, mph_i):
-            if i is not None:
-                cleaned[i] = clean_integer_like(cleaned[i])
+        src_tz = resolve_source_tz_from_header(raw_headers)
+        cols = rename_headers(raw_headers)
 
-        # Rate
-        if rate_i is not None:
-            cleaned[rate_i] = clean_rate(cleaned[rate_i])
+        time_index = find_col(raw_headers, "Time")
+        course_index = find_col(raw_headers, "Course")
+        feet_index = find_col(raw_headers, "feet")
+        rate_index = find_col(raw_headers, "Rate")
+        kts_index = find_col(raw_headers, "kts")
+        mph_index = find_col(raw_headers, "mph")
 
-        records.append(dict(zip(cols, cleaned)))
+        date_from_url = parse_url_date(url)
+        records = []
 
-    # === Dateien schreiben ===
-    if not records:
-        print(f"Warnung: Keine Datenzeilen für {url}")
-        continue
+        for row in table.find_all("tr"):
+            if "flight_event" in row.get("class", []):
+                continue
+            cells = row.find_all("td")
+            if not cells:
+                continue
 
-    # DataFrame
-    df = pd.DataFrame.from_records(records)
-    # sortiere nach Zeit (wenn vorhanden)
-    time_col = next((c for c in df.columns if c.startswith("time_")), None)
-    if time_col:
-        order = pd.to_datetime(df[time_col], format="%d.%m.%Y %H:%M:%S", errors="coerce")
-        df = df.loc[order.sort_values().index].reset_index(drop=True)
+            values = [visible_text(td) for td in cells]
+            if len(values) != len(raw_headers):
+                continue
 
-    # 1) CSV (Semikolon)
-    csv_path = os.path.join(flight_dir, f"{base_name}.csv")
-    df.to_csv(csv_path, sep=";", index=False, encoding="utf-8")
+            cleaned = values[:]
 
-    # 2) GeoJSON (LineString + Properties-Arrays)
-    geojson_obj = df_to_geojson(df)
-    geojson_path = os.path.join(flight_dir, f"{base_name}.geojson")
-    with open(geojson_path, "w", encoding="utf-8") as f:
-        json.dump(geojson_obj, f, ensure_ascii=False, indent=2)
+            if time_index is not None:
+                try:
+                    naive = datetime.strptime(cleaned[time_index], "%a %I:%M:%S %p")
+                    source_time = datetime(
+                        date_from_url.year,
+                        date_from_url.month,
+                        date_from_url.day,
+                        naive.hour,
+                        naive.minute,
+                        naive.second,
+                        tzinfo=src_tz,
+                    )
+                    local_time = source_time.astimezone(TARGET_TZ)
+                    cleaned[time_index] = local_time.strftime("%d.%m.%Y %H:%M:%S")
+                except Exception:
+                    pass
 
-    # 3) Meta-JSON
-    meta = compute_meta(df)
-    meta_path = os.path.join(flight_dir, f"{base_name}.meta.json")
-    with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(meta, f, ensure_ascii=False, indent=2)
+            if course_index is not None:
+                cleaned[course_index] = clean_course(cleaned[course_index])
 
-    print(f"✅ Export für {url}")
-    print(f"   HTML:   {html_path}")
-    print(f"   CSV:    {csv_path}")
-    print(f"   GEOJSON:{geojson_path}")
-    print(f"   META:   {meta_path}")
+            if feet_index is not None:
+                cleaned[feet_index] = clean_integer_like(cleaned[feet_index])
+            for idx in (kts_index, mph_index):
+                if idx is not None:
+                    cleaned[idx] = clean_integer_like(cleaned[idx])
+
+            if rate_index is not None:
+                cleaned[rate_index] = clean_rate(cleaned[rate_index])
+
+            records.append(dict(zip(cols, cleaned)))
+
+        if not records:
+            print(f"Warnung: Keine Datenzeilen für {url}")
+            continue
+
+        df = pd.DataFrame.from_records(records)
+        time_col = next((col for col in df.columns if col.startswith("time_")), None)
+        if time_col:
+            order = pd.to_datetime(df[time_col], format="%d.%m.%Y %H:%M:%S", errors="coerce")
+            df = df.loc[order.sort_values().index].reset_index(drop=True)
+
+        facilities = []
+        if "reporting_facility" in df.columns:
+            for value in df["reporting_facility"].tolist():
+                if isinstance(value, str) and value and "surface" not in value.lower():
+                    facilities.append(value)
+        departure_facility = facilities[0] if facilities else None
+        arrival_facility = facilities[-1] if facilities else None
+
+        departure_airport, departure_code = extract_airport_from_facility(departure_facility)
+        arrival_airport, arrival_code = extract_airport_from_facility(arrival_facility)
+
+        date_label = date_from_url.strftime("%d%m%Y")
+        callsign = (flight.get("callsign") or slug_from_url(url).split("_")[0] or "UNKNOWN").upper()
+        aircraft = flight.get("aircraft")
+        aircraft_hex = flight.get("aircraft_hex")
+
+        dep_code_for_dir = select_display_code(departure_airport, departure_code)
+        arr_code_for_dir = select_display_code(arrival_airport, arrival_code)
+
+        base_name = f"{callsign}_{date_label}_{dep_code_for_dir}_{arr_code_for_dir}"
+        flight_dir = os.path.join(EXPORT_BASE, base_name)
+        ensure_dir(flight_dir)
+
+        final_html_path = os.path.join(flight_dir, f"{base_name}.html")
+        if os.path.abspath(html_path) != os.path.abspath(final_html_path):
+            shutil.copyfile(html_path, final_html_path)
+            html_abs = os.path.abspath(html_path)
+            cache_abs = os.path.abspath(CACHE_DIR)
+            if os.path.exists(html_path) and os.path.commonpath([html_abs, cache_abs]) == cache_abs:
+                os.remove(html_path)
+            downloads[url] = final_html_path
+        else:
+            downloads[url] = final_html_path
+        save_download_log(DOWNLOAD_LOG_PATH, downloads)
+
+        csv_path = os.path.join(flight_dir, f"{base_name}.csv")
+        df.to_csv(csv_path, sep=";", index=False, encoding="utf-8")
+
+        geojson_obj = df_to_geojson(df)
+        geojson_path = os.path.join(flight_dir, f"{base_name}.geojson")
+        with open(geojson_path, "w", encoding="utf-8") as handle:
+            json.dump(geojson_obj, handle, ensure_ascii=False, indent=2)
+
+        extra_meta = {
+            "callsign": flight.get("callsign") or callsign,
+            "aircraft_registration": aircraft,
+            "aircraft_hex": aircraft_hex,
+            "source_url": url,
+            "reporting_facility_departure": departure_facility,
+            "reporting_facility_arrival": arrival_facility,
+            "departure_airport": departure_airport,
+            "arrival_airport": arrival_airport,
+        }
+
+        meta = compute_meta(df, extra=extra_meta)
+        meta_path = os.path.join(flight_dir, f"{base_name}.meta.json")
+        with open(meta_path, "w", encoding="utf-8") as handle:
+            json.dump(meta, handle, ensure_ascii=False, indent=2)
+
+        print(f"✅ Export für {url}")
+        print(f"   Ordner: {flight_dir}")
+        print(f"   HTML:   {final_html_path}")
+        print(f"   CSV:    {csv_path}")
+        print(f"   GEOJSON:{geojson_path}")
+        print(f"   META:   {meta_path}")
+
+
+if __name__ == "__main__":
+    main()
