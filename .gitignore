@@ -1,0 +1,26 @@
+# Bytecode / Cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environments
+.env
+.venv/
+venv/
+
+# Packaging / Build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs & Misc
+*.log
+
+# IDE / Tooling
+.idea/
+.vscode/
+
+# Local exports
+export/
