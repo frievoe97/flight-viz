@@ -38,7 +38,8 @@
     border-color: hsl(var(--border));
   }
   body {
-    background-color: hsl(var(--background));
+    /* background-color: var(--map-water); */
+    background-color: var(--map-land);
     color: hsl(var(--foreground));
   }
 }

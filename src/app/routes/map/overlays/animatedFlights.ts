@@ -13,7 +13,7 @@ const ANIMATIONS: ScenegraphLayerProps['_animations'] = {
 const BASE_SPEED = 0.004
 const SMOOTH = 0.35
 const FLIGHT_FADE_WINDOW = 0.05
-const TARGET_FPS = 20
+const TARGET_FPS = 10
 const FRAME_INTERVAL = 1 / TARGET_FPS
 
 type FlightLite = Pick<Flight, 'id' | 'name' | 'points'>

@@ -18,6 +18,46 @@ export type Point = {
 
 export type Stats = { min: number | null; max: number | null; avg: number | null }
 
+export type BoundingBox = {
+  minLat: number | null
+  minLon: number | null
+  maxLat: number | null
+  maxLon: number | null
+}
+
+export type AirportMeta = {
+  icao: string | null
+  iata: string | null
+  name: string | null
+  city: string | null
+  subd: string | null
+  country: string | null
+  elevation: number | null
+  lat: number | null
+  lon: number | null
+}
+
+export type FlightMeta = {
+  startTimeBerlin: string | null
+  endTimeBerlin: string | null
+  durationSeconds: number | null
+  trackLengthKm: number | null
+  bbox: BoundingBox | null
+  points: number | null
+  speedKts: Stats | null
+  speedMph: Stats | null
+  altitudeFt: Stats | null
+  verticalRateFpm: Stats | null
+  callsign: string | null
+  aircraftRegistration: string | null
+  aircraftHex: string | null
+  sourceUrl: string | null
+  reportingFacilityDeparture: string | null
+  reportingFacilityArrival: string | null
+  departureAirport: AirportMeta | null
+  arrivalAirport: AirportMeta | null
+}
+
 export type Flight = {
   id: string
   name: string
@@ -30,7 +70,7 @@ export type Flight = {
   speedKtsStats: Stats
   speedMphStats: Stats
   verticalRateStats: Stats
-  meta: Record<string, unknown> | null
+  meta: FlightMeta | null
   points: Point[]
 }
 
@@ -83,6 +123,42 @@ function toNumber(rawValue: unknown): number | null {
   if (!normalized) return null
   const parsed = Number.parseFloat(normalized)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+function toStringOrNull(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed.length ? trimmed : null
+  }
+  return null
+}
+
+function makeStats(min: unknown, max: unknown, avg: unknown): Stats | null {
+  const minValue = toNumber(min)
+  const maxValue = toNumber(max)
+  const avgValue = toNumber(avg)
+  if ([minValue, maxValue, avgValue].every((v) => v == null)) return null
+  return { min: minValue, max: maxValue, avg: avgValue }
+}
+
+function normalizeAirport(raw: unknown): AirportMeta | null {
+  if (!raw || typeof raw !== 'object') return null
+  const record = raw as Record<string, unknown>
+  return {
+    icao: toStringOrNull(record['icao'])?.toUpperCase() ?? null,
+    iata: toStringOrNull(record['iata'])?.toUpperCase() ?? null,
+    name: toStringOrNull(record['name']),
+    city: toStringOrNull(record['city']),
+    subd: toStringOrNull(record['subd']),
+    country: (() => {
+      const value = toStringOrNull(record['country'])
+      if (!value) return null
+      return value.length === 2 ? value.toUpperCase() : value
+    })(),
+    elevation: toNumber(record['elevation']),
+    lat: toNumber(record['lat']),
+    lon: toNumber(record['lon']),
+  }
 }
 
 function calcStats(values: Array<number | null | undefined>): Stats {
@@ -165,35 +241,53 @@ function parseEuDateTime(token: string | null | undefined) {
   return new Date(Date.UTC(year, month - 1, day, hour, minute, second))
 }
 
-function normalizeMeta(metaRaw: unknown) {
+function normalizeMeta(metaRaw: unknown): FlightMeta | null {
   if (!metaRaw || typeof metaRaw !== 'object') return null
   const m = metaRaw as Record<string, unknown>
-  const toNum = (v: unknown) => toNumber(v)
-  const bboxRaw = m['bbox'] as Record<string, unknown> | null
-  const bbox = bboxRaw
-    ? {
-        minLat: toNum(bboxRaw?.min_lat),
-        minLon: toNum(bboxRaw?.min_lon),
-        maxLat: toNum(bboxRaw?.max_lat),
-        maxLon: toNum(bboxRaw?.max_lon),
-      }
-    : null
+  const bboxSource = m['bbox']
+  const bbox: BoundingBox | null =
+    bboxSource && typeof bboxSource === 'object'
+      ? {
+          minLat: toNumber((bboxSource as Record<string, unknown>)['min_lat']),
+          minLon: toNumber((bboxSource as Record<string, unknown>)['min_lon']),
+          maxLat: toNumber((bboxSource as Record<string, unknown>)['max_lat']),
+          maxLon: toNumber((bboxSource as Record<string, unknown>)['max_lon']),
+        }
+      : null
+
+  const pointsRaw = m['points']
+  const points = (() => {
+    if (typeof pointsRaw === 'number' && Number.isFinite(pointsRaw)) return pointsRaw
+    if (typeof pointsRaw === 'string') {
+      const parsed = Number.parseInt(pointsRaw, 10)
+      return Number.isFinite(parsed) ? parsed : null
+    }
+    return null
+  })()
+
   return {
-    startTimeBerlin: (m['start_time_berlin'] as string) ?? null,
-    endTimeBerlin: (m['end_time_berlin'] as string) ?? null,
-    durationSeconds: toNum(m['duration_seconds']),
-    trackLengthKm: toNum(m['track_length_km']),
+    startTimeBerlin: toStringOrNull(m['start_time_berlin']),
+    endTimeBerlin: toStringOrNull(m['end_time_berlin']),
+    durationSeconds: toNumber(m['duration_seconds']),
+    trackLengthKm: toNumber(m['track_length_km']),
     bbox,
-    points:
-      typeof m['points'] === 'number'
-        ? (m['points'] as number)
-        : typeof m['points'] === 'string'
-        ? Number.parseInt(m['points'] as string, 10)
-        : null,
-    speedKts: { min: toNum(m['speed_kts_min']), max: toNum(m['speed_kts_max']), avg: toNum(m['speed_kts_avg']) },
-    speedMph: { min: toNum(m['speed_mph_min']), max: toNum(m['speed_mph_max']), avg: toNum(m['speed_mph_avg']) },
-    altitudeFt: { min: toNum(m['altitude_ft_min']), max: toNum(m['altitude_ft_max']), avg: toNum(m['altitude_ft_avg']) },
-    verticalRateFpm: { min: toNum(m['vertical_rate_fpm_min']), max: toNum(m['vertical_rate_fpm_max']), avg: toNum(m['vertical_rate_fpm_avg']) },
+    points,
+    speedKts: makeStats(m['speed_kts_min'], m['speed_kts_max'], m['speed_kts_avg']),
+    speedMph: makeStats(m['speed_mph_min'], m['speed_mph_max'], m['speed_mph_avg']),
+    altitudeFt: makeStats(m['altitude_ft_min'], m['altitude_ft_max'], m['altitude_ft_avg']),
+    verticalRateFpm: makeStats(
+      m['vertical_rate_fpm_min'],
+      m['vertical_rate_fpm_max'],
+      m['vertical_rate_fpm_avg']
+    ),
+    callsign: toStringOrNull(m['callsign']),
+    aircraftRegistration: toStringOrNull(m['aircraft_registration']),
+    aircraftHex: toStringOrNull(m['aircraft_hex'])?.toUpperCase() ?? null,
+    sourceUrl: toStringOrNull(m['source_url']),
+    reportingFacilityDeparture: toStringOrNull(m['reporting_facility_departure']),
+    reportingFacilityArrival: toStringOrNull(m['reporting_facility_arrival']),
+    departureAirport: normalizeAirport(m['departure_airport']),
+    arrivalAirport: normalizeAirport(m['arrival_airport']),
   }
 }
 
@@ -214,11 +308,24 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
   }
   const filename = path.split('/').pop() ?? 'flight.geojson'
   const id = filename.replace(/\.geojson$/i, '')
-  const { origin, destination } = extractAirportCodes(id)
+  const fallbackCodes = extractAirportCodes(id)
 
   const metaKey = path.replace(/\.geojson$/i, '.meta.json')
   const metaRaw = metaModules[metaKey]
   const normalizedMeta = normalizeMeta(metaRaw)
+
+  const deriveAirportCode = (airport: AirportMeta | null | undefined, fallback: string | null) => {
+    const candidates = [airport?.iata, airport?.icao, fallback]
+    for (const candidate of candidates) {
+      if (!candidate) continue
+      const trimmed = candidate.trim()
+      if (trimmed) return trimmed
+    }
+    return null
+  }
+
+  const origin = deriveAirportCode(normalizedMeta?.departureAirport, fallbackCodes.origin)
+  const destination = deriveAirportCode(normalizedMeta?.arrivalAirport, fallbackCodes.destination)
 
   let feature: LineStringFeature | null = null
   const g = geojson as FeatureCollection | LineStringFeature
@@ -311,8 +418,10 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
   const positions = points.map((p) => ({ latitude: p.position[1], longitude: p.position[0] }))
 
   const name = (() => {
-    const { origin, destination } = extractAirportCodes(id)
-    return origin && destination ? `${origin} → ${destination}` : id
+    if (origin && destination) return `${origin} → ${destination}`
+    if (origin) return `${origin} → ?`
+    if (destination) return `? → ${destination}`
+    return id
   })()
   const pointCount = points.length
 
@@ -415,16 +524,11 @@ export async function getFlightData(): Promise<FlightData> {
       const speedMax = Number.isFinite(flight.speedKtsStats.max as number) ? (flight.speedKtsStats.max as number) : 0
       totals.maxSpeedKts = Math.max(totals.maxSpeedKts, speedMax)
 
-      const metaPointsUnknown = flight.meta ? (flight.meta as Record<string, unknown>)['points'] : null
-      const metaPointsNum =
-        typeof metaPointsUnknown === 'number'
-          ? metaPointsUnknown
-          : typeof metaPointsUnknown === 'string'
-          ? Number.parseInt(metaPointsUnknown, 10)
-          : null
-      const weight = Number.isFinite(metaPointsNum as number)
-        ? (metaPointsNum as number)
-        : flight.pointCount ?? segments.length + 1
+      const metaPointsNum = flight.meta?.points
+      const weight =
+        typeof metaPointsNum === 'number' && Number.isFinite(metaPointsNum)
+          ? metaPointsNum
+          : flight.pointCount
       if (Number.isFinite(flight.speedKtsStats.avg as number)) {
         totals.speedKtsWeightedSum += (flight.speedKtsStats.avg as number) * weight
         totals.speedWeight += weight

@@ -1,0 +1,53 @@
+{
+  "start_time_berlin": "10.10.2025 12:41:53",
+  "end_time_berlin": "10.10.2025 13:58:18",
+  "duration_seconds": 4585,
+  "track_length_km": 916.204,
+  "bbox": {
+    "min_lat": 43.5473,
+    "min_lon": 7.101,
+    "max_lat": 50.976,
+    "max_lon": 10.3844
+  },
+  "speed_kts_min": 123,
+  "speed_kts_max": 485,
+  "speed_kts_avg": 374.6,
+  "speed_mph_min": 142,
+  "speed_mph_max": 558,
+  "speed_mph_avg": 431.0,
+  "altitude_ft_min": 100,
+  "altitude_ft_max": 41000,
+  "altitude_ft_avg": 26181,
+  "vertical_rate_fpm_min": -2575.0,
+  "vertical_rate_fpm_max": 3750.0,
+  "vertical_rate_fpm_avg": 51.8,
+  "points": 174,
+  "callsign": "UNI135",
+  "aircraft_registration": "D-CHLP",
+  "aircraft_hex": "3CD3A9",
+  "source_url": "https://www.flightaware.com/live/flight/UNI135/history/20251010/1052Z/EDDK/LIRP/tracklog",
+  "reporting_facility_departure": "FlightAware ADS-B(CGN / EDDK)",
+  "reporting_facility_arrival": "FlightAware ADS-B(PSA / LIRP)",
+  "departure_airport": {
+    "icao": "EDDK",
+    "iata": "CGN",
+    "name": "Cologne Bonn Airport",
+    "city": "Cologne",
+    "subd": "Nordrhein-Westfalen",
+    "country": "DE",
+    "elevation": 302.0,
+    "lat": 50.8659,
+    "lon": 7.14274
+  },
+  "arrival_airport": {
+    "icao": "LIRP",
+    "iata": "PSA",
+    "name": "Pisa / San Giusto - Galileo Galilei International Airport",
+    "city": "Pisa",
+    "subd": "Tuscany",
+    "country": "IT",
+    "elevation": 6.0,
+    "lat": 43.6839,
+    "lon": 10.3927
+  }
+}

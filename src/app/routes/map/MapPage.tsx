@@ -5,7 +5,7 @@ import type { Map as MaplibreMap, LngLatBoundsLike, PaddingOptions } from 'mapli
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { Deck, Layer, PickingInfo } from '@deck.gl/core'
-import { Link } from 'react-router-dom'
+import { Globe2, Map as MapIcon, PieChart, SlidersHorizontal } from 'lucide-react'
 import { getFlightData, type Flight, type FlightSegment } from '@/data'
 import { MAP_STYLE } from '@/lib/map/deckConfig'
 import FlightChart from './FlightChart'
@@ -16,6 +16,8 @@ import { useTrailsOverlay, type Trip } from './overlays/trails'
 import { useAnalyticsLayer, type AnalyticsPickingInfo } from './overlays/analytics'
 import OverlayPicker from './components/OverlayPicker'
 
+import { useNavigate } from 'react-router-dom'
+
 type MapWithCamera = MaplibreMap & {
   cameraForBounds?: (
     bounds: LngLatBoundsLike,
@@ -24,6 +26,7 @@ type MapWithCamera = MaplibreMap & {
 }
 
 const ZERO_PADDING: PaddingOptions = { top: 0, right: 0, bottom: 0, left: 0 }
+const SEGMENT_FOCUS_PITCH = 32
 
 const MODE_SUPPORT: Record<'globe' | 'mercator', ReadonlyArray<OverlayId>> = {
   globe: ['flights', 'trails'],
@@ -55,6 +58,9 @@ export default function MapPage() {
   const [segmentWidthScale, setSegmentWidthScale] = useState(1)
   const [analyticsRadius, setAnalyticsRadius] = useState(20000)
   const [projectionMode, setProjectionMode] = useState<ProjectionMode>('globe')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  const navigate = useNavigate()
 
   const mapRef = useRef<MapRef | null>(null)
   const deckOverlayRef = useRef<MapboxOverlay | null>(null)
@@ -274,20 +280,40 @@ export default function MapPage() {
       bounds.extend([sw.lng - lngOffset, sw.lat - latOffset])
     }
 
+    const startPoint = flight.points[0]
+    const endPoint = flight.points[flight.points.length - 1]
+    const deltaLon = endPoint.position[0] - startPoint.position[0]
+    const deltaLat = endPoint.position[1] - startPoint.position[1]
+
+    let bearing = mapInstance.getBearing?.() ?? 0
+    if (projectionMode === 'mercator') {
+      let raw = (Math.atan2(deltaLat, deltaLon) * 180) / Math.PI
+      if (raw > 90) raw -= 180
+      if (raw < -90) raw += 180
+      bearing = raw
+    }
+
+    const padding = { top: 48, right: 120, bottom: 80, left: 120 }
     const camera = mapInstance.cameraForBounds?.(bounds as LngLatBoundsLike, {
-      padding: { top: 36, right: 48, bottom: 48, left: 48 },
+      padding,
       maxZoom: 12,
     })
-    if (camera?.center) {
-      const center = maplibregl.LngLat.convert(camera.center)
-      mapInstance.easeTo({
-        center,
-        zoom: camera.zoom ?? mapInstance.getZoom(),
-        duration: 700,
-        easing: (t) => t,
-      })
-    }
-  }, [ready, data, selectedFlightId, isSegments])
+
+    const midLon = (startPoint.position[0] + endPoint.position[0]) / 2
+    const midLat = (startPoint.position[1] + endPoint.position[1]) / 2
+    const center = camera?.center
+      ? maplibregl.LngLat.convert(camera.center)
+      : new maplibregl.LngLat(midLon, midLat)
+
+    mapInstance.easeTo({
+      center,
+      zoom: camera?.zoom ?? mapInstance.getZoom(),
+      duration: 900,
+      easing: (t) => t,
+      bearing,
+      pitch: projectionMode === 'mercator' ? SEGMENT_FOCUS_PITCH : 0,
+    })
+  }, [ready, data, selectedFlightId, isSegments, projectionMode])
 
   const altitudeScale = useMemo(() => {
     if (!data) return 1
@@ -449,7 +475,7 @@ export default function MapPage() {
   if (!data) return <div className="h-full w-full" />
 
   const controlCardClass =
-    'w-52 rounded-md border bg-[var(--panel-bg)]/85 px-3 py-2 text-xs text-white space-y-2 shadow backdrop-blur-sm'
+    'w-full rounded-md border bg-[var(--panel-bg)]/85 px-3 py-2 text-xs text-white space-y-2 shadow backdrop-blur-sm'
 
   const selectedFlight = isSegments ? findSelectedFlight(data?.flights, selectedFlightId) : null
   const chartData = selectedFlight
@@ -489,146 +515,190 @@ export default function MapPage() {
         >
           <NavigationControl
             key={projectionMode}
-            style={{ position: 'absolute', top: '4rem', right: '0.75rem' }}
+            style={{
+              position: 'absolute',
+              top: '0.75rem',
+              right: '0.75rem',
+              borderRadius: '9999px',
+              overflow: 'hidden',
+              border: '1px solid var(--panel-border)',
+              boxShadow: '0 6px 18px rgba(15, 23, 42, 0.45)',
+            }}
             showCompass={projectionMode !== 'globe'}
+            showZoom
             visualizePitch={projectionMode !== 'globe'}
           />
         </MapGL>
 
-        <div className="absolute top-3 right-3 z-10">
-          <Link
-            to="/stats"
-            className="controls-btn rounded-md px-4 py-2 text-sm font-medium uppercase tracking-wide"
+        <div className="absolute top-3 left-3 z-10">
+          <button
+            type="button"
+            className="controls-btn rounded-full p-2 text-white shadow"
             style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)' }}
+            onClick={toggleProjection}
+            aria-label={
+              projectionMode === 'mercator'
+                ? 'Zur Globus-Projektion wechseln'
+                : 'Zur Mercator-Projektion wechseln'
+            }
+            title={
+              projectionMode === 'mercator'
+                ? 'Switch to Globe projection'
+                : 'Switch to Mercator projection'
+            }
           >
-            Statistiken
-          </Link>
+            {projectionMode === 'mercator' ? (
+              <Globe2 className="h-5 w-5" aria-hidden />
+            ) : (
+              <MapIcon className="h-5 w-5" aria-hidden />
+            )}
+          </button>
         </div>
 
-        <div className="absolute top-3 left-3 flex flex-col gap-2 max-w-xs">
-          <div
-            className="flex flex-col gap-2 bg-[#0f172a]/85 backdrop-blur-sm p-3 rounded-lg border"
-            style={{ borderColor: 'var(--panel-border)' }}
+        <div className="absolute bottom-3 left-3 z-10">
+          <button
+            type="button"
+            onClick={() => navigate('/stats')}
+            className="controls-btn rounded-full p-2 text-white shadow"
+            style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)' }}
+            aria-label="Statistiken öffnen"
+            title="Statistiken"
           >
-            <OverlayPicker
-              active={activeOverlay}
-              onSelect={handleOverlaySelect}
-              disabledOptions={disabledOverlays}
-            />
-            <button
-              type="button"
-              className="controls-btn rounded-md px-3 py-2 text-sm shadow"
-              onClick={toggleProjection}
+            <PieChart className="h-5 w-5 scale-110" aria-hidden />
+          </button>
+        </div>
+
+        <div className="absolute bottom-3 right-3 z-10 flex flex-col items-end gap-2">
+          {settingsOpen ? (
+            <div
+              className="w-64 space-y-3 rounded-lg border bg-[#0f172a]/92 p-3 text-sm text-white shadow-lg backdrop-blur-md"
+              style={{ borderColor: 'var(--panel-border)' }}
             >
-              Toggle Projection ({projectionMode === 'mercator' ? 'Globe' : 'Mercator'})
-            </button>
+              <OverlayPicker
+                active={activeOverlay}
+                onSelect={handleOverlaySelect}
+                disabledOptions={disabledOverlays}
+              />
 
-            {isFlights ? (
-              <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
-                    Speed
-                  </span>
-                  <span>{flightSpeedMultiplier.toFixed(0)}x</span>
-                </div>
-                <input
-                  className="w-full accent-[var(--flight-speed)]"
-                  type="range"
-                  min={10}
-                  max={30}
-                  step={1}
-                  value={flightSpeedMultiplier}
-                  onChange={(event) => setFlightSpeedMultiplier(Number(event.target.value))}
-                />
-              </div>
-            ) : null}
-
-            {isTrails ? (
-              <>
+              {isFlights ? (
                 <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
                   <div className="flex items-center justify-between">
                     <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
-                      Trail speed
+                      Flight speed
                     </span>
-                    <span>{trailSpeedMultiplier.toFixed(1)}x</span>
+                    <span>{flightSpeedMultiplier.toFixed(0)}x</span>
                   </div>
                   <input
                     className="w-full accent-[var(--flight-speed)]"
                     type="range"
-                    min={0.2}
-                    max={4}
-                    step={0.1}
-                    value={trailSpeedMultiplier}
-                    onChange={(event) => setTrailSpeedMultiplier(Number(event.target.value))}
+                    min={10}
+                    max={30}
+                    step={1}
+                    value={flightSpeedMultiplier}
+                    onChange={(event) => setFlightSpeedMultiplier(Number(event.target.value))}
                   />
                 </div>
+              ) : null}
+
+              {isTrails ? (
+                <>
+                  <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
+                        Trail speed
+                      </span>
+                      <span>{trailSpeedMultiplier.toFixed(1)}x</span>
+                    </div>
+                    <input
+                      className="w-full accent-[var(--flight-speed)]"
+                      type="range"
+                      min={0.2}
+                      max={4}
+                      step={0.1}
+                      value={trailSpeedMultiplier}
+                      onChange={(event) => setTrailSpeedMultiplier(Number(event.target.value))}
+                    />
+                  </div>
+                  <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
+                        Trail length
+                      </span>
+                      <span>{Math.round(trailLengthSeconds)}s</span>
+                    </div>
+                    <input
+                      className="w-full accent-[var(--flight-altitude)]"
+                      type="range"
+                      min={5}
+                      max={120}
+                      step={5}
+                      value={trailLengthSeconds}
+                      onChange={(event) => setTrailLengthSeconds(Number(event.target.value))}
+                    />
+                  </div>
+                </>
+              ) : null}
+
+              {isSegments ? (
                 <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
                   <div className="flex items-center justify-between">
                     <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
-                      Trail length
+                      Path width
                     </span>
-                    <span>{Math.round(trailLengthSeconds)}s</span>
+                    <span>{segmentWidthScale.toFixed(1)}x</span>
                   </div>
                   <input
-                    className="w-full accent-[var(--flight-altitude)]"
+                    className="w-full accent-[var(--flight-speed)]"
                     type="range"
-                    min={5}
-                    max={120}
-                    step={5}
-                    value={trailLengthSeconds}
-                    onChange={(event) => setTrailLengthSeconds(Number(event.target.value))}
+                    min={0.5}
+                    max={3}
+                    step={0.1}
+                    value={segmentWidthScale}
+                    onChange={(event) => setSegmentWidthScale(Number(event.target.value))}
                   />
                 </div>
-              </>
-            ) : null}
+              ) : null}
 
-            {isSegments ? (
-              <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
-                    Path width
-                  </span>
-                  <span>{segmentWidthScale.toFixed(1)}x</span>
+              {isAnalytics ? (
+                <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
+                      Hex radius
+                    </span>
+                    <span>{Math.round(analyticsRadius / 1000)} km</span>
+                  </div>
+                  <input
+                    className="w-full accent-[var(--flight-speed)]"
+                    type="range"
+                    min={5000}
+                    max={50000}
+                    step={1000}
+                    value={analyticsRadius}
+                    onChange={(event) => setAnalyticsRadius(Number(event.target.value))}
+                  />
+                  <button
+                    type="button"
+                    className="controls-btn rounded-md text-xs px-3 py-1 w-full"
+                    onClick={() => setAnalyticsMetric((m) => (m === 'alt' ? 'count' : 'alt'))}
+                  >
+                    Metric: {analyticsMetric === 'alt' ? 'Avg altitude' : 'Count'}
+                  </button>
                 </div>
-                <input
-                  className="w-full accent-[var(--flight-speed)]"
-                  type="range"
-                  min={0.5}
-                  max={3}
-                  step={0.1}
-                  value={segmentWidthScale}
-                  onChange={(event) => setSegmentWidthScale(Number(event.target.value))}
-                />
-              </div>
-            ) : null}
+              ) : null}
+            </div>
+          ) : null}
 
-            {isAnalytics ? (
-              <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
-                    Hex radius
-                  </span>
-                  <span>{Math.round(analyticsRadius / 1000)} km</span>
-                </div>
-                <input
-                  className="w-full accent-[var(--flight-speed)]"
-                  type="range"
-                  min={5000}
-                  max={50000}
-                  step={1000}
-                  value={analyticsRadius}
-                  onChange={(event) => setAnalyticsRadius(Number(event.target.value))}
-                />
-                <button
-                  type="button"
-                  className="controls-btn rounded-md text-xs px-3 py-1 w-full"
-                  onClick={() => setAnalyticsMetric((m) => (m === 'alt' ? 'count' : 'alt'))}
-                >
-                  Metric: {analyticsMetric === 'alt' ? 'Avg altitude' : 'Count'}
-                </button>
-              </div>
-            ) : null}
-          </div>
+          <button
+            type="button"
+            className="controls-btn rounded-full p-2 text-white shadow"
+            style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)' }}
+            onClick={() => setSettingsOpen((prev) => !prev)}
+            aria-expanded={settingsOpen}
+            aria-label={settingsOpen ? 'Kartenoptionen schließen' : 'Kartenoptionen öffnen'}
+            title="Kartenoptionen"
+          >
+            <SlidersHorizontal className="h-5 w-5" aria-hidden />
+          </button>
         </div>
       </div>
 

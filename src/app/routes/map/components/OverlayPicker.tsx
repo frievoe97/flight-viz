@@ -17,22 +17,27 @@ export function OverlayPicker({
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button className="controls-btn rounded-md px-3 py-2 text-sm shadow">
-          {current?.label ?? 'Select'}
+        <button className="controls-btn flex w-full items-center justify-between rounded-md px-3 py-2 text-sm shadow transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[rgba(56,189,248,0.45)]">
+          <span className="truncate text-left">
+            {current?.label ?? 'Overlay wählen'}
+          </span>
+          <span aria-hidden className="ml-2 text-xs text-[hsl(var(--muted-foreground))]">
+            ▼
+          </span>
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          side="right"
-          align="start"
+          side="top"
+          align="end"
           sideOffset={8}
-          className="rounded-lg border w-64 bg-[#0f172a]/95 backdrop-blur-md shadow-lg ml-3 -mt-3"
+          className="w-64 rounded-lg border bg-[#0f172a]/95 p-3 text-sm text-white shadow-lg backdrop-blur-md"
           style={{ borderColor: 'var(--panel-border)' }}
         >
-          <div className="flex flex-col gap-2 text-sm text-white p-3">
+          <div className="flex flex-col gap-2">
             {overlayOptions.map((option) => {
-              const activeVariant = option.id === active
               const isDisabled = disabledSet.has(option.id)
+              const isActive = option.id === active
               return (
                 <Popover.Close asChild key={option.id}>
                   <button
@@ -43,13 +48,14 @@ export function OverlayPicker({
                       if (!isDisabled) onSelect(option.id)
                     }}
                     className={cn(
-                      'w-full text-left rounded-md border px-3 py-2 transition-colors',
+                      'w-full rounded-md border px-3 py-2 text-left transition',
                       isDisabled
-                        ? 'opacity-50 cursor-not-allowed border-[color:var(--panel-border)]'
-                        : activeVariant
-                          ? 'bg-[var(--panel-bg)]/90 text-white border-[color:var(--panel-border)]'
-                          : 'hover:bg-white/10 border-[color:var(--panel-border)]'
+                        ? 'cursor-not-allowed opacity-50'
+                        : isActive
+                          ? 'bg-[var(--panel-bg)]/90 text-white'
+                          : 'hover:bg-white/10'
                     )}
+                    style={{ borderColor: 'var(--panel-border)' }}
                   >
                     <div className="font-medium">{option.label}</div>
                     <div className="text-xs text-[hsl(var(--muted-foreground))]">

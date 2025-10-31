@@ -151,9 +151,73 @@ function parseEuDateTime(raw: string | null | undefined) {
 }
 
 function getMetaDateString(flight: Flight, key: 'startTimeBerlin' | 'endTimeBerlin') {
-  if (!flight.meta || typeof flight.meta !== 'object') return null
-  const value = (flight.meta as Record<string, unknown>)[key]
-  return typeof value === 'string' ? value : null
+  if (!flight.meta) return null
+  return flight.meta[key]
+}
+
+type AirportRole = 'origin' | 'destination'
+
+type OptionValue = { value: string; label: string }
+
+function getAirportMeta(flight: Flight, role: AirportRole) {
+  if (!flight.meta) return null
+  return role === 'origin' ? flight.meta.departureAirport : flight.meta.arrivalAirport
+}
+
+function getAirportCode(flight: Flight, role: AirportRole): string | null {
+  const airport = getAirportMeta(flight, role)
+  const fallback = role === 'origin' ? flight.origin : flight.destination
+  const candidates = [airport?.iata, airport?.icao, fallback]
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    const trimmed = candidate.trim()
+    if (trimmed) return trimmed
+  }
+  return null
+}
+
+function getAirportOption(flight: Flight, role: AirportRole): OptionValue {
+  const airport = getAirportMeta(flight, role)
+  const code = getAirportCode(flight, role)
+  const value = code ?? UNKNOWN_LABEL
+  if (!airport) {
+    return { value, label: value }
+  }
+  const descriptor = [airport.name, airport.city]
+    .map((token) => (typeof token === 'string' ? token.trim() : ''))
+    .filter(Boolean)
+    .join(', ')
+  if (!descriptor) return { value, label: value }
+  if (value === UNKNOWN_LABEL) return { value, label: descriptor }
+  return { value, label: `${value} • ${descriptor}` }
+}
+
+function formatCountryLabel(codeOrName: string, displayNames: Intl.DisplayNames | null) {
+  const trimmed = codeOrName.trim()
+  if (!trimmed) return UNKNOWN_LABEL
+  if (/^[A-Za-z]{2}$/.test(trimmed)) {
+    const upper = trimmed.toUpperCase()
+    const label = displayNames?.of(upper)
+    return label ?? upper
+  }
+  return trimmed
+}
+
+function getCountryOption(
+  flight: Flight,
+  role: AirportRole,
+  displayNames: Intl.DisplayNames | null
+): OptionValue {
+  const airport = getAirportMeta(flight, role)
+  const countryRaw = typeof airport?.country === 'string' ? airport?.country : null
+  if (!countryRaw) {
+    return { value: UNKNOWN_LABEL, label: UNKNOWN_LABEL }
+  }
+  const normalized = countryRaw.length === 2 ? countryRaw.toUpperCase() : countryRaw
+  return {
+    value: normalized,
+    label: formatCountryLabel(normalized, displayNames),
+  }
 }
 
 function getFlightStart(flight: Flight) {
@@ -171,37 +235,6 @@ function formatDateLabel(key: string) {
   const [year, month, day] = key.split('-').map((token) => Number.parseInt(token, 10))
   if ([year, month, day].some((n) => !Number.isFinite(n))) return key
   return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${String(year).slice(2)}`
-}
-
-function airportCodeToCountry(code: string | null | undefined) {
-  if (!code) return UNKNOWN_LABEL
-  const prefix = code.slice(0, 2).toUpperCase()
-  switch (prefix) {
-    case 'EB':
-      return 'Belgium'
-    case 'ED':
-      return 'Germany'
-    case 'EG':
-      return 'United Kingdom'
-    case 'EH':
-      return 'Netherlands'
-    case 'EP':
-      return 'Poland'
-    case 'LD':
-      return 'Croatia'
-    case 'LE':
-      return 'Spain'
-    case 'LF':
-      return 'France'
-    case 'LI':
-      return 'Italy'
-    case 'LM':
-      return 'Malta'
-    case 'LT':
-      return 'Turkey'
-    default:
-      return UNKNOWN_LABEL
-  }
 }
 
 function truncateRouteLabel(label: string) {
@@ -340,6 +373,14 @@ export default function StatsPage() {
 
   const flights = flightData?.flights ?? []
   const nf0 = useMemo(() => new Intl.NumberFormat('de-DE'), [])
+  const regionDisplayNames = useMemo(() => {
+    try {
+      return new Intl.DisplayNames(['en'], { type: 'region' })
+    } catch (error) {
+      console.warn('Intl.DisplayNames not supported in this environment', error)
+      return null
+    }
+  }, [])
 
   const filters = useMemo<Filters>(
     () => ({
@@ -362,41 +403,52 @@ export default function StatsPage() {
         if (!start || formatDateKey(start) !== criteria.date) return false
       }
       if (!omitSet.has('origin') && criteria.origin !== 'all') {
-        const origin = flight.origin ?? UNKNOWN_LABEL
-        if (origin !== criteria.origin) return false
+        const originValue = getAirportOption(flight, 'origin').value
+        if (originValue !== criteria.origin) return false
       }
       if (!omitSet.has('destination') && criteria.destination !== 'all') {
-        const destination = flight.destination ?? UNKNOWN_LABEL
-        if (destination !== criteria.destination) return false
+        const destinationValue = getAirportOption(flight, 'destination').value
+        if (destinationValue !== criteria.destination) return false
       }
       if (!omitSet.has('originCountry') && criteria.originCountry !== 'all') {
-        if (airportCodeToCountry(flight.origin) !== criteria.originCountry) return false
+        const originCountryValue = getCountryOption(flight, 'origin', regionDisplayNames).value
+        if (originCountryValue !== criteria.originCountry) return false
       }
       if (!omitSet.has('destinationCountry') && criteria.destinationCountry !== 'all') {
-        if (airportCodeToCountry(flight.destination) !== criteria.destinationCountry) return false
+        const destinationCountryValue = getCountryOption(
+          flight,
+          'destination',
+          regionDisplayNames
+        ).value
+        if (destinationCountryValue !== criteria.destinationCountry) return false
       }
       return true
     },
-    [filters]
+    [filters, regionDisplayNames]
   )
 
   const availableFilterOptions = useMemo(() => {
-    const collectOptions = (key: keyof Filters, projector: (flight: Flight) => string | null) => {
-      const counts = new Map<string, number>()
+    const collectOptions = (key: keyof Filters, projector: (flight: Flight) => OptionValue) => {
+      const counts = new Map<string, { label: string; count: number }>()
       flights.forEach((flight) => {
         if (!matchesFilters(flight, undefined, [key])) return
-        const value = projector(flight) ?? UNKNOWN_LABEL
-        counts.set(value, (counts.get(value) ?? 0) + 1)
+        const { value, label } = projector(flight)
+        const resolvedValue = value || UNKNOWN_LABEL
+        const resolvedLabel = label || resolvedValue
+        const entry = counts.get(resolvedValue)
+        if (entry) {
+          entry.count += 1
+        } else {
+          counts.set(resolvedValue, { label: resolvedLabel, count: 1 })
+        }
       })
-      const entries = [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0], 'de'))
-      const total = entries.reduce((sum, [, count]) => sum + count, 0)
+      const entries = [...counts.entries()].sort((a, b) =>
+        a[1].label.localeCompare(b[1].label, 'de', { sensitivity: 'base' })
+      )
+      const total = entries.reduce((sum, [, { count }]) => sum + count, 0)
       return [
         { value: 'all', label: 'All', count: total },
-        ...entries.map(([value, count]) => ({
-          value,
-          label: value,
-          count,
-        })),
+        ...entries.map(([value, { label, count }]) => ({ value, label, count })),
       ]
     }
 
@@ -421,16 +473,18 @@ export default function StatsPage() {
 
     return {
       dates,
-      origins: collectOptions('origin', (flight) => flight.origin ?? UNKNOWN_LABEL),
-      destinations: collectOptions('destination', (flight) => flight.destination ?? UNKNOWN_LABEL),
+      origins: collectOptions('origin', (flight) => getAirportOption(flight, 'origin')),
+      destinations: collectOptions('destination', (flight) =>
+        getAirportOption(flight, 'destination')
+      ),
       originCountries: collectOptions('originCountry', (flight) =>
-        airportCodeToCountry(flight.origin)
+        getCountryOption(flight, 'origin', regionDisplayNames)
       ),
       destinationCountries: collectOptions('destinationCountry', (flight) =>
-        airportCodeToCountry(flight.destination)
+        getCountryOption(flight, 'destination', regionDisplayNames)
       ),
     }
-  }, [flights, matchesFilters])
+  }, [flights, matchesFilters, regionDisplayNames])
 
   useEffect(() => {
     if (
@@ -485,8 +539,22 @@ export default function StatsPage() {
       .filter((flight) => {
         if (!matchesFilters(flight)) return false
         if (!search) return true
-        const haystack = [flight.name, flight.id, flight.origin, flight.destination]
-          .filter(Boolean)
+        const haystackParts = [
+          flight.name,
+          flight.id,
+          getAirportCode(flight, 'origin'),
+          getAirportCode(flight, 'destination'),
+          getAirportOption(flight, 'origin').label,
+          getAirportOption(flight, 'destination').label,
+          flight.meta?.departureAirport?.name ?? null,
+          flight.meta?.departureAirport?.city ?? null,
+          flight.meta?.arrivalAirport?.name ?? null,
+          flight.meta?.arrivalAirport?.city ?? null,
+          flight.meta?.callsign ?? null,
+          flight.meta?.aircraftRegistration ?? null,
+        ]
+        const haystack = haystackParts
+          .filter((part): part is string => typeof part === 'string' && part.length > 0)
           .join(' ')
           .toLowerCase()
         return haystack.includes(search)
@@ -497,6 +565,15 @@ export default function StatsPage() {
         return startB - startA
       })
   }, [flights, matchesFilters, searchTerm])
+
+  const flightPickerOptions = useMemo(
+    () =>
+      filteredFlights.map((flight) => ({
+        id: flight.id,
+        label: `${flight.name} (${flight.id})`,
+      })),
+    [filteredFlights]
+  )
 
   useEffect(() => {
     if (!filteredFlights.length) {
@@ -517,6 +594,12 @@ export default function StatsPage() {
     () => filteredFlights.find((flight) => flight.id === selectedFlightId) ?? null,
     [filteredFlights, selectedFlightId]
   )
+
+  const selectedFlightDisplay = useMemo(() => {
+    if (!flightPickerOptions.length) return 'No flights available'
+    const found = flightPickerOptions.find((option) => option.id === selectedFlightId)
+    return found?.label ?? flightPickerOptions[0]?.label ?? 'Select flight'
+  }, [flightPickerOptions, selectedFlightId])
 
   const flightsPerDay = useMemo(() => {
     const counts = new Map<string, number>()
@@ -644,56 +727,55 @@ export default function StatsPage() {
   }, [flights])
 
   const sankeyData = useMemo(() => {
-    const flows = new Map<string, number>()
+    type Flow = { origin: OptionValue; destination: OptionValue; count: number }
+    const flows = new Map<string, Flow>()
 
     flights.forEach((flight) => {
-      const origin = airportCodeToCountry(flight.origin)
-      const destination = airportCodeToCountry(flight.destination)
+      const origin = getCountryOption(flight, 'origin', regionDisplayNames)
+      const destination = getCountryOption(flight, 'destination', regionDisplayNames)
 
-      if (ignoreSameStartTarget && origin === destination) return // ← hier wird gefiltert
+      if (ignoreSameStartTarget && origin.value === destination.value) return
 
-      const key = `${origin}→${destination}`
-      flows.set(key, (flows.get(key) ?? 0) + 1)
+      const key = `${origin.value}→${destination.value}`
+      const existing = flows.get(key)
+      if (existing) {
+        existing.count += 1
+      } else {
+        flows.set(key, { origin, destination, count: 1 })
+      }
     })
 
     const MAX_LINKS = 6
-    const top = [...flows.entries()]
-      .map(([key, value]) => {
-        const [origin, destination] = key.split('→')
-        return { origin, destination, value }
-      })
-      .sort((a, b) => b.value - a.value)
-      .slice(0, MAX_LINKS)
-
-    const origins = Array.from(new Set(top.map((f) => f.origin)))
-    const destinations = Array.from(new Set(top.map((f) => f.destination)))
+    const top = [...flows.values()].sort((a, b) => b.count - a.count).slice(0, MAX_LINKS)
 
     const originIndex = new Map<string, number>()
     const destinationIndex = new Map<string, number>()
     const nodes: Array<{ name: string }> = []
 
-    origins.forEach((o) => {
-      originIndex.set(o, nodes.length)
-      nodes.push({ name: `${o} • Origin` })
-    })
-    destinations.forEach((d) => {
-      destinationIndex.set(d, nodes.length)
-      nodes.push({ name: `${d} • Destination` })
+    top.forEach(({ origin, destination }) => {
+      if (!originIndex.has(origin.value)) {
+        originIndex.set(origin.value, nodes.length)
+        nodes.push({ name: `${origin.label} • Origin` })
+      }
+      if (!destinationIndex.has(destination.value)) {
+        destinationIndex.set(destination.value, nodes.length)
+        nodes.push({ name: `${destination.label} • Destination` })
+      }
     })
 
-    const pickLinkColor = (origin: string, destination: string) => {
-      const key = `${origin}-${destination}`
+    const pickLinkColor = (originValue: string, destinationValue: string) => {
+      const key = `${originValue}-${destinationValue}`
       const hash = key.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
       return SANKEY_COLORS[hash % SANKEY_COLORS.length]
     }
 
     const links = top
-      .map(({ origin, destination, value }) => {
-        const source = originIndex.get(origin)
-        const target = destinationIndex.get(destination)
+      .map(({ origin, destination, count }) => {
+        const source = originIndex.get(origin.value)
+        const target = destinationIndex.get(destination.value)
         if (source == null || target == null) return null
-        const color = pickLinkColor(origin, destination)
-        return { source, target, value, color, fill: color, stroke: color }
+        const color = pickLinkColor(origin.value, destination.value)
+        return { source, target, value: count, color, fill: color, stroke: color }
       })
       .filter(
         (
@@ -709,7 +791,7 @@ export default function StatsPage() {
       )
 
     return { nodes, links }
-  }, [flights, ignoreSameStartTarget]) // ← Flag als Dependency
+  }, [flights, ignoreSameStartTarget, regionDisplayNames])
 
   const selectedFlightSeries = useMemo(() => {
     if (!selectedFlight) return []
@@ -829,12 +911,22 @@ export default function StatsPage() {
     const avgSpeed = Number.isFinite(selectedFlight.speedKtsStats.avg as number)
       ? (selectedFlight.speedKtsStats.avg as number) * 1.852
       : null
+    const originOption = getAirportOption(selectedFlight, 'origin')
+    const destinationOption = getAirportOption(selectedFlight, 'destination')
+    const originCountryOption = getCountryOption(selectedFlight, 'origin', regionDisplayNames)
+    const destinationCountryOption = getCountryOption(
+      selectedFlight,
+      'destination',
+      regionDisplayNames
+    )
     return {
       name: selectedFlight.name,
-      origin: selectedFlight.origin ?? UNKNOWN_LABEL,
-      destination: selectedFlight.destination ?? UNKNOWN_LABEL,
-      originCountry: airportCodeToCountry(selectedFlight.origin),
-      destinationCountry: airportCodeToCountry(selectedFlight.destination),
+      originCode: originOption.value,
+      originLabel: originOption.label,
+      destinationCode: destinationOption.value,
+      destinationLabel: destinationOption.label,
+      originCountry: originCountryOption.label,
+      destinationCountry: destinationCountryOption.label,
       distanceKm,
       durationSeconds,
       avgAltitude,
@@ -842,7 +934,7 @@ export default function StatsPage() {
       avgSpeed,
       pointCount: selectedFlight.pointCount,
     }
-  }, [selectedFlight])
+  }, [regionDisplayNames, selectedFlight])
 
   const flightAnimationStyle = useMemo<CSSProperties>(
     () => ({ animation: 'stats-fade-in 320ms ease', animationFillMode: 'both' }),
@@ -864,9 +956,9 @@ export default function StatsPage() {
 
   return (
     <div className="h-full w-full" style={{ backgroundColor: 'var(--map-land)' }}>
-      <div className="grid h-full w-full grid-cols-[16rem_minmax(0,1fr)]">
+      <div className="flex h-full w-full flex-col lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
         <aside
-          className="flex h-full flex-col gap-6 border-r px-5 py-6"
+          className="flex w-full flex-col gap-6 border-b px-4 py-4 lg:h-full lg:border-b-0 lg:border-r lg:px-5 lg:py-6"
           style={{ borderColor: 'var(--panel-border)', backgroundColor: 'rgba(15,23,42,0.65)' }}
         >
           <div className="space-y-2 text-white">
@@ -878,7 +970,7 @@ export default function StatsPage() {
               that suit your question.
             </p>
           </div>
-          <nav className="space-y-2">
+          <nav className="grid grid-cols-2 gap-2 sm:flex sm:flex-col sm:space-y-2">
             <SidebarButton
               active={activeView === 'overview'}
               onClick={() => setActiveView('overview')}
@@ -900,7 +992,7 @@ export default function StatsPage() {
           </div>
         </aside>
 
-        <main className="flex h-full min-h-0 flex-col px-6 py-6">
+        <main className="flex h-full min-h-0 flex-col px-4 py-4 lg:px-6 lg:py-6">
           {activeView === 'overview' ? (
             <section className="flex h-full min-h-0 flex-col gap-4 text-white">
               <header className="flex flex-shrink-0 flex-col gap-1">
@@ -911,7 +1003,7 @@ export default function StatsPage() {
                   Activity, altitude patterns, and performance metrics across every recorded flight.
                 </p>
               </header>
-              <div className="grid h-full min-h-0 gap-4 auto-rows-[minmax(0,1fr)] grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid h-full min-h-0 gap-4 auto-rows-[minmax(0,1fr)] grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
                 <ChartCard
                   title="Flights per Day"
                   subtitle="Daily mission count across all flights"
@@ -1098,21 +1190,35 @@ export default function StatsPage() {
                   <div className="relative w-full h-full">
                     {/* Switch oben rechts */}
                     <div
-                      className="absolute right-2 top-2 z-10 flex items-center gap-2 rounded-md border px-2 py-1 text-xs"
-                      style={{
-                        backgroundColor: 'rgba(15,23,42,0.75)',
-                        borderColor: 'var(--panel-border)',
-                      }}
+                      className="absolute right-2 top-2 z-10"
+                      style={{ pointerEvents: 'none' }}
                     >
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          className="h-3.5 w-3.5 accent-[var(--flight-speed)]"
-                          checked={ignoreSameStartTarget}
-                          onChange={(e) => setIgnoreSameStartTarget(e.target.checked)}
-                        />
-                        Ignore same start and target
-                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIgnoreSameStartTarget((prev) => !prev)}
+                        className="flex items-center gap-3 rounded-full border px-3 py-1.5 text-xs font-medium text-white shadow"
+                        style={{
+                          backgroundColor: 'rgba(15,23,42,0.82)',
+                          borderColor: 'var(--panel-border)',
+                          pointerEvents: 'auto',
+                        }}
+                        aria-pressed={ignoreSameStartTarget}
+                      >
+                        <span className="whitespace-nowrap">Ignore same start/target</span>
+                        <span
+                          className={cn(
+                            'relative inline-flex h-4 w-8 items-center rounded-full bg-white/15 transition-colors',
+                            ignoreSameStartTarget ? 'bg-[var(--flight-speed)]/80' : 'bg-white/15'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'absolute left-0.5 h-3 w-3 rounded-full bg-white transition-transform',
+                              ignoreSameStartTarget ? 'translate-x-4' : 'translate-x-0'
+                            )}
+                          />
+                        </span>
+                      </button>
                     </div>
 
                     {/* Chart füllt den Container via ResponsiveContainer */}
@@ -1208,7 +1314,7 @@ export default function StatsPage() {
               </header>
 
               <div
-                className="flex flex-shrink-0 flex-col gap-3 rounded-xl border px-1 py-1"
+                className="flex flex-shrink-0 flex-col gap-3 rounded-xl border px-4 py-4"
                 style={{
                   borderColor: 'var(--panel-border)',
                   backgroundColor: 'rgba(15, 23, 42, 0.6)',
@@ -1273,28 +1379,55 @@ export default function StatsPage() {
                     <span className="text-[0.65rem] uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                       Select Flight
                     </span>
-                    <div
-                      className="rounded-md border bg-[#0f172a]/60 px-3 py-2"
-                      style={{ borderColor: 'var(--panel-border)' }}
-                    >
-                      <select
-                        value={selectedFlightId ?? ''}
-                        onChange={(event) => setSelectedFlightId(event.target.value || null)}
-                        disabled={!filteredFlights.length}
-                        className="w-full bg-transparent text-sm text-white focus:outline-none"
-                      >
-                        {filteredFlights.length ? null : <option value="">No flights found</option>}
-                        {filteredFlights.map((flight) => (
-                          <option
-                            className="bg-[var(--panel-bg)] text-black"
-                            key={flight.id}
-                            value={flight.id}
-                          >
-                            {flight.name} ({flight.id})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    <Popover.Root>
+                      <Popover.Trigger asChild>
+                        <button
+                          type="button"
+                          disabled={!flightPickerOptions.length}
+                          className={cn(
+                            'controls-btn flex w-full items-center justify-between rounded-md px-3 py-2 text-sm shadow transition focus:outline-none focus:ring-2 focus:ring-[rgba(56,189,248,0.45)]',
+                            !flightPickerOptions.length && 'opacity-50 cursor-not-allowed'
+                          )}
+                        >
+                          <span className="truncate text-left">{selectedFlightDisplay}</span>
+                          <span aria-hidden className="ml-2 text-xs text-[hsl(var(--muted-foreground))]">
+                            ▼
+                          </span>
+                        </button>
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content
+                          side="bottom"
+                          align="start"
+                          sideOffset={6}
+                          className="max-h-72 w-80 overflow-y-auto rounded-lg border bg-[#0f172a]/95 p-2 text-sm text-white shadow-xl backdrop-blur-md"
+                          style={{ borderColor: 'var(--panel-border)' }}
+                        >
+                          {flightPickerOptions.length ? (
+                            <div className="flex flex-col gap-1">
+                              {flightPickerOptions.map((option) => (
+                                <Popover.Close asChild key={option.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedFlightId(option.id)}
+                                    className={cn(
+                                      'flex w-full items-center justify-between rounded-md px-3 py-2 text-left transition hover:bg-white/10',
+                                      selectedFlightId === option.id && 'bg-white/10'
+                                    )}
+                                  >
+                                    <span className="truncate">{option.label}</span>
+                                  </button>
+                                </Popover.Close>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">
+                              No flights available
+                            </div>
+                          )}
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
                   </div>
                 </div>
               </div>
@@ -1307,7 +1440,7 @@ export default function StatsPage() {
                   title="Flight Details"
                   subtitle={
                     selectedFlightStats
-                      ? `${selectedFlightStats.origin} → ${selectedFlightStats.destination}`
+                      ? `${selectedFlightStats.originLabel} → ${selectedFlightStats.destinationLabel}`
                       : 'Select a flight to view statistics'
                   }
                   style={flightAnimationStyle}
