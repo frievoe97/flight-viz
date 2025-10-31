@@ -7,5 +7,6 @@
   "https://www.flightaware.com/live/flight/UNI132/history/20251027/1250Z/tracklog": "./export/UNI134_27102025_PMO_AMS/UNI134_27102025_PMO_AMS.html",
   "https://www.flightaware.com/live/flight/UNI132/history/20251027/1630Z/EHAM/EDDK/tracklog": "./export/UNI134_27102025_EHVB_CGN/UNI134_27102025_EHVB_CGN.html",
   "https://www.flightaware.com/live/flight/UNI134/history/20251030/1740Z/EHEH/EDDK/tracklog": "./export/UNI134_30102025_EIN_CGN/UNI134_30102025_EIN_CGN.html",
-  "https://www.flightaware.com/live/flight/UNI135/history/20251010/1746Z/EGAC/EDDK/tracklog": "./export/UNI135_10102025_BHD_CGN/UNI135_10102025_BHD_CGN.html"
+  "https://www.flightaware.com/live/flight/UNI135/history/20251010/1746Z/EGAC/EDDK/tracklog": "./export/UNI135_10102025_BHD_CGN/UNI135_10102025_BHD_CGN.html",
+  "https://www.flightaware.com/live/flight/UNI135/history/20251031/0825Z/EDDK/LTBS/tracklog": "./export/UNI135_31102025_CGN_DLM/UNI135_31102025_CGN_DLM.html"
 }
