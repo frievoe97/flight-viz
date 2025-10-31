@@ -16,7 +16,7 @@ export function SidebarButton({ active, children, onClick }: SidebarButtonProps)
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'w-full rounded-lg border px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.3em] transition-colors',
+        'w-full rounded-lg border px-3 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] transition-colors',
         active
           ? 'bg-[rgba(15,23,42,0.78)] text-white border-[color:var(--panel-border)] shadow'
           : 'text-[hsl(var(--muted-foreground))] border-transparent hover:bg-white/5'
