@@ -81,26 +81,60 @@ export function useMapPageState() {
     hasFitBoundsRef.current = false
   }, [data])
 
-  const zoomToDataBounds = useCallback(() => {
-    if (!data) return
-    const map = mapRef.current?.getMap?.()
-    if (!map) return
-    const bounds = new maplibregl.LngLatBounds()
-    for (const flight of data.flights) {
-      for (const point of flight.points) {
-        const [lon, lat] = point.position
-        if (Number.isFinite(lon) && Number.isFinite(lat)) {
-          bounds.extend([lon, lat])
+  const focusAllFlights = useCallback(
+    (mode: ProjectionMode, { animate = true }: { animate?: boolean } = {}) => {
+      if (!data) return
+      const mapInstance = mapRef.current?.getMap?.() as MapWithCamera | undefined
+      if (!mapInstance) return
+
+      const bounds = new maplibregl.LngLatBounds()
+      for (const flight of data.flights) {
+        for (const point of flight.points) {
+          const [lon, lat] = point.position
+          if (Number.isFinite(lon) && Number.isFinite(lat)) {
+            bounds.extend([lon, lat])
+          }
         }
       }
-    }
-    if (bounds.isEmpty()) return
-    hasFitBoundsRef.current = true
-    map.fitBounds(bounds, {
-      padding: { top: 48, right: 48, bottom: 48, left: 48 },
-      duration: 0,
-    })
-  }, [data])
+      if (bounds.isEmpty()) return
+
+      const padding = { top: 48, right: 48, bottom: 48, left: 48 }
+      const camera = mapInstance.cameraForBounds?.(bounds as LngLatBoundsLike, { padding })
+
+      const targetCenter = camera?.center
+        ? maplibregl.LngLat.convert(camera.center)
+        : (() => {
+            mapInstance.fitBounds(bounds, { padding, duration: 0 })
+            return maplibregl.LngLat.convert(mapInstance.getCenter())
+          })()
+
+      const targetZoom = camera?.zoom ?? mapInstance.getZoom()
+      const targetBearing = mode === 'mercator' ? data.INITIAL_VIEW_STATE.bearing : 0
+
+      const rawPitch = Number.isFinite(data.INITIAL_VIEW_STATE.pitch)
+        ? data.INITIAL_VIEW_STATE.pitch
+        : 0
+      const pitchBase = rawPitch > 0 ? rawPitch : 25
+      const targetPitch = mode === 'mercator' ? Math.max(10, Math.min(pitchBase, 45)) : 0
+
+      const duration = animate ? 800 : 0
+      const easing = animate ? (t: number) => 1 - Math.pow(1 - t, 3) : undefined
+
+      mapInstance.easeTo({
+        center: targetCenter,
+        zoom: targetZoom,
+        bearing: targetBearing,
+        pitch: targetPitch,
+        duration,
+        easing,
+        padding: ZERO_PADDING,
+      })
+
+      setMapZoom(targetZoom)
+      hasFitBoundsRef.current = true
+    },
+    [data]
+  )
 
   useEffect(() => {
     return () => {
@@ -127,41 +161,49 @@ export function useMapPageState() {
     }
   }, [isSegments])
 
+  const configureInteractions = useCallback((mode: ProjectionMode) => {
+    const map = mapRef.current?.getMap?.()
+    if (!map) return
+
+    map.dragPan?.enable?.()
+    map.scrollZoom?.enable?.()
+    map.boxZoom?.enable?.()
+    map.doubleClickZoom?.enable?.()
+
+    map.dragRotate?.disable?.()
+    map.touchZoomRotate?.enable?.()
+    map.touchZoomRotate?.disableRotation?.()
+    map.touchPitch?.disable?.()
+    map.keyboard?.disable?.()
+
+    if (mode === 'mercator') {
+      map.dragRotate?.enable?.()
+      map.touchZoomRotate?.enableRotation?.()
+      map.touchPitch?.enable?.()
+      map.keyboard?.enable?.()
+    }
+  }, [])
+
   const applyProjection = useCallback(
     (mode: ProjectionMode) => {
       const map = mapRef.current?.getMap?.()
       if (!map) return
       const mercatorBearing = data?.INITIAL_VIEW_STATE?.bearing ?? 0
       const mercatorPitch = data?.INITIAL_VIEW_STATE?.pitch ?? 0
+      configureInteractions(mode)
       map.setProjection?.({ type: mode })
       if (mode === 'globe') {
         map.setBearing(0)
         map.setPitch(0)
         map.setMaxPitch(0)
-        map.dragPan?.enable?.()
-        map.scrollZoom?.enable?.()
-        map.boxZoom?.enable?.()
-        map.doubleClickZoom?.enable?.()
-        map.touchZoomRotate?.enable?.()
-        map.touchZoomRotate?.disableRotation?.()
-        map.dragRotate?.disable?.()
-        map.keyboard?.disable?.()
       } else {
         map.setBearing(mercatorBearing)
         map.setPitch(mercatorPitch)
         map.setMaxPitch(85)
-        map.dragPan?.enable?.()
-        map.scrollZoom?.enable?.()
-        map.boxZoom?.enable?.()
-        map.doubleClickZoom?.enable?.()
-        map.touchZoomRotate?.enable?.()
-        map.dragRotate?.enable?.()
-        map.touchZoomRotate?.enableRotation?.()
-        map.keyboard?.enable?.()
       }
       requestDeckRedraw('projection-change')
     },
-    [data, requestDeckRedraw]
+    [configureInteractions, data, requestDeckRedraw]
   )
 
   useEffect(() => {
@@ -171,8 +213,8 @@ export function useMapPageState() {
 
   useEffect(() => {
     if (!ready || !data || hasFitBoundsRef.current) return
-    zoomToDataBounds()
-  }, [ready, data, zoomToDataBounds])
+    focusAllFlights(projectionMode, { animate: false })
+  }, [ready, data, projectionMode, focusAllFlights])
 
   const allowedOverlays = MODE_SUPPORT[projectionMode]
   const allowedOverlaySet = useMemo(() => new Set<OverlayId>(allowedOverlays), [allowedOverlays])
@@ -211,7 +253,9 @@ export function useMapPageState() {
 
     const preferred = lastOverlayByMode.current[projectionMode]
     const fallback =
-      (preferred && allowedOverlaySet.has(preferred) && preferred) || allowedOverlays[0] || 'flights'
+      (preferred && allowedOverlaySet.has(preferred) && preferred) ||
+      allowedOverlays[0] ||
+      'flights'
 
     if (fallback !== activeOverlay) {
       setActiveOverlay(fallback)
@@ -233,17 +277,9 @@ export function useMapPageState() {
       map.once('remove', () => overlay.finalize())
     }
 
-    map.dragPan?.enable?.()
-    map.scrollZoom?.enable?.()
-    map.boxZoom?.enable?.()
-    map.doubleClickZoom?.enable?.()
-    map.touchZoomRotate?.enable?.()
-    map.dragRotate?.enable?.()
-    map.touchZoomRotate?.enableRotation?.()
-    map.keyboard?.enable?.()
-
+    configureInteractions(projectionMode)
     requestDeckRedraw('projection-change')
-  }, [ready, requestDeckRedraw])
+  }, [ready, projectionMode, configureInteractions, requestDeckRedraw])
 
   const switchProjectionMode = useCallback(
     (next: ProjectionMode) => {
@@ -327,7 +363,7 @@ export function useMapPageState() {
     const deltaLon = (lonB - lonA) * Math.cos(toRad(midLat))
     const deltaLat = latB - latA
 
-    let bearing = -(toDeg(Math.atan2(deltaLat, deltaLon || 1e-6)))
+    let bearing = -toDeg(Math.atan2(deltaLat, deltaLon || 1e-6))
     if (!Number.isFinite(bearing)) {
       bearing = mapInstance.getBearing?.() ?? 0
     }
@@ -543,24 +579,8 @@ export function useMapPageState() {
   }, [])
 
   const resetView = useCallback(() => {
-    const map = mapRef.current?.getMap?.()
-    if (!map || !data) return
-    const view = data.INITIAL_VIEW_STATE
-    const targetZoom = view.zoom ?? 1
-    const targetPitch = projectionMode === 'globe' ? 0 : view.pitch ?? 0
-
-    map.easeTo({
-      center: [view.longitude, view.latitude],
-      zoom: targetZoom,
-      bearing: view.bearing ?? 0,
-      pitch: targetPitch,
-      duration: 800,
-      padding: ZERO_PADDING,
-      easing: (t) => 1 - Math.pow(1 - t, 3),
-    })
-    setMapZoom(targetZoom)
-    hasFitBoundsRef.current = true
-  }, [data, projectionMode])
+    focusAllFlights(projectionMode, { animate: true })
+  }, [focusAllFlights, projectionMode])
 
   return {
     data,
