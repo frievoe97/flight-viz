@@ -1,0 +1,53 @@
+{
+  "start_time_berlin": "31.10.2025 16:24:15",
+  "end_time_berlin": "31.10.2025 19:11:27",
+  "duration_seconds": 10032,
+  "track_length_km": 2022.868,
+  "bbox": {
+    "min_lat": 42.5684,
+    "min_lon": -3.0715,
+    "max_lat": 53.3177,
+    "max_lon": 18.251
+  },
+  "speed_kts_min": 111,
+  "speed_kts_max": 457,
+  "speed_kts_avg": 383.7,
+  "speed_mph_min": 128,
+  "speed_mph_max": 526,
+  "speed_mph_avg": 441.5,
+  "altitude_ft_min": 700,
+  "altitude_ft_max": 40000,
+  "altitude_ft_avg": 31660,
+  "vertical_rate_fpm_min": -3000.0,
+  "vertical_rate_fpm_max": 3079.0,
+  "vertical_rate_fpm_avg": -27.6,
+  "points": 367,
+  "callsign": "UNI135",
+  "aircraft_registration": "D-CHLP",
+  "aircraft_hex": "3CD3A9",
+  "source_url": "https://www.flightaware.com/live/flight/UNI135/history/20251031/1529Z/LDDU/EGNR/tracklog",
+  "reporting_facility_departure": "FlightAware ADS-B(DBV / LDDU)",
+  "reporting_facility_arrival": "FlightAware ADS-B(CEG / EGNR)",
+  "departure_airport": {
+    "icao": "LDDU",
+    "iata": "DBV",
+    "name": "Dubrovnik Airport",
+    "city": "Dubrovnik",
+    "subd": "Dubrovacko-Neretvanska",
+    "country": "HR",
+    "elevation": 527.0,
+    "lat": 42.5614,
+    "lon": 18.2682
+  },
+  "arrival_airport": {
+    "icao": "EGNR",
+    "iata": "CEG",
+    "name": "Hawarden Airport",
+    "city": "Hawarden",
+    "subd": "Wales",
+    "country": "GB",
+    "elevation": 45.0,
+    "lat": 53.1781,
+    "lon": -2.97778
+  }
+}

@@ -21,3 +21,7 @@ dist/
 # IDE / Tooling
 .idea/
 .vscode/
+
+.DS_Store
+.vite/
+node_modules/

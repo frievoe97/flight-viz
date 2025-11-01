@@ -1,0 +1,53 @@
+{
+  "start_time_berlin": "01.11.2025 10:33:45",
+  "end_time_berlin": "01.11.2025 13:57:41",
+  "duration_seconds": 12236,
+  "track_length_km": 2745.048,
+  "bbox": {
+    "min_lat": 37.7276,
+    "min_lon": -3.0402,
+    "max_lat": 53.1808,
+    "max_lon": 23.9432
+  },
+  "speed_kts_min": 103,
+  "speed_kts_max": 493,
+  "speed_kts_avg": 430.1,
+  "speed_mph_min": 119,
+  "speed_mph_max": 567,
+  "speed_mph_avg": 494.9,
+  "altitude_ft_min": 175,
+  "altitude_ft_max": 43000,
+  "altitude_ft_avg": 35739,
+  "vertical_rate_fpm_min": -2526.0,
+  "vertical_rate_fpm_max": 3047.0,
+  "vertical_rate_fpm_avg": 15.2,
+  "points": 421,
+  "callsign": "UNI135",
+  "aircraft_registration": "D-CHLP",
+  "aircraft_hex": "3CD3A9",
+  "source_url": "https://www.flightaware.com/live/flight/UNI135/history/20251101/0934Z/EGNR/LGAV/tracklog",
+  "reporting_facility_departure": "FlightAware ADS-B(CEG / EGNR)",
+  "reporting_facility_arrival": "FlightAware ADS-B(ATH / LGAV)",
+  "departure_airport": {
+    "icao": "EGNR",
+    "iata": "CEG",
+    "name": "Hawarden Airport",
+    "city": "Hawarden",
+    "subd": "Wales",
+    "country": "GB",
+    "elevation": 45.0,
+    "lat": 53.1781,
+    "lon": -2.97778
+  },
+  "arrival_airport": {
+    "icao": "LGAV",
+    "iata": "ATH",
+    "name": "Eleftherios Venizelos International Airport",
+    "city": "Athens",
+    "subd": "Attica",
+    "country": "GR",
+    "elevation": 308.0,
+    "lat": 37.9364,
+    "lon": 23.9445
+  }
+}
