@@ -1,0 +1,53 @@
+{
+  "start_time_berlin": "01.11.2025 19:03:40",
+  "end_time_berlin": "01.11.2025 21:44:45",
+  "duration_seconds": 9665,
+  "track_length_km": 1892.421,
+  "bbox": {
+    "min_lat": 42.5898,
+    "min_lon": -2.7011,
+    "max_lat": 51.6148,
+    "max_lon": 18.1965
+  },
+  "speed_kts_min": 111,
+  "speed_kts_max": 443,
+  "speed_kts_avg": 374.4,
+  "speed_mph_min": 128,
+  "speed_mph_max": 510,
+  "speed_mph_avg": 430.8,
+  "altitude_ft_min": 950,
+  "altitude_ft_max": 40000,
+  "altitude_ft_avg": 32532,
+  "vertical_rate_fpm_min": -2156.0,
+  "vertical_rate_fpm_max": 2920.0,
+  "vertical_rate_fpm_avg": -136.6,
+  "points": 332,
+  "callsign": "UNI135",
+  "aircraft_registration": "D-CHLP",
+  "aircraft_hex": "3CD3A9",
+  "source_url": "https://www.flightaware.com/live/flight/UNI135/history/20251101/1804Z/LDDU/EGGD/tracklog",
+  "reporting_facility_departure": "FlightAware ADS-B(BDS / LIBR)",
+  "reporting_facility_arrival": "FlightAware ADS-B(CWL / EGFF)",
+  "departure_airport": {
+    "icao": "LIBR",
+    "iata": "BDS",
+    "name": "Brindisi / Casale Airport",
+    "city": "Brindisi",
+    "subd": "Apulia",
+    "country": "IT",
+    "elevation": 47.0,
+    "lat": 40.6576,
+    "lon": 17.947
+  },
+  "arrival_airport": {
+    "icao": "EGFF",
+    "iata": "CWL",
+    "name": "Cardiff International Airport",
+    "city": "Cardiff",
+    "subd": "Wales",
+    "country": "GB",
+    "elevation": 220.0,
+    "lat": 51.3967,
+    "lon": -3.34333
+  }
+}
