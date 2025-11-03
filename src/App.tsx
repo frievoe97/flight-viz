@@ -5,7 +5,8 @@ import FullscreenLayout from '@/app/components/FullscreenLayout'
 import MapPage from '@/app/routes/map/MapPage'
 import StatsPage from '@/app/routes/stats/StatsPage'
 
-const basename = import.meta.env.PROD ? '/flight-viz' : '/'
+// Vite setzt BASE_URL = base aus vite.config.ts (inkl. trailing slash).
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '') // '/' -> ''  | '/flight-viz/' -> '/flight-viz'
 
 export default function App() {
   return (
