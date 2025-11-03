@@ -1,0 +1,53 @@
+{
+  "start_time_berlin": "10.10.2025 19:42:36",
+  "end_time_berlin": "10.10.2025 21:03:01",
+  "duration_seconds": 4825,
+  "track_length_km": 1021.241,
+  "bbox": {
+    "min_lat": 50.8725,
+    "min_lon": -5.9601,
+    "max_lat": 54.609,
+    "max_lon": 7.1184
+  },
+  "speed_kts_min": 123,
+  "speed_kts_max": 498,
+  "speed_kts_avg": 398.5,
+  "speed_mph_min": 142,
+  "speed_mph_max": 573,
+  "speed_mph_avg": 458.6,
+  "altitude_ft_min": 25,
+  "altitude_ft_max": 39000,
+  "altitude_ft_avg": 24521,
+  "vertical_rate_fpm_min": -2368.0,
+  "vertical_rate_fpm_max": 3175.0,
+  "vertical_rate_fpm_avg": -80.0,
+  "points": 186,
+  "callsign": "UNI135",
+  "aircraft_registration": "D-CHLP",
+  "aircraft_hex": "3CD3A9",
+  "source_url": "https://www.flightaware.com/live/flight/UNI135/history/20251010/1746Z/EGAC/EDDK/tracklog",
+  "reporting_facility_departure": "FlightAware ADS-B(BHD / EGAC)",
+  "reporting_facility_arrival": "FlightAware ADS-B(CGN / EDDK)",
+  "departure_airport": {
+    "icao": "EGAC",
+    "iata": "BHD",
+    "name": "George Best Belfast City Airport",
+    "city": "Belfast",
+    "subd": "Northern Ireland",
+    "country": "GB",
+    "elevation": 15.0,
+    "lat": 54.6181,
+    "lon": -5.8725
+  },
+  "arrival_airport": {
+    "icao": "EDDK",
+    "iata": "CGN",
+    "name": "Cologne Bonn Airport",
+    "city": "Cologne",
+    "subd": "Nordrhein-Westfalen",
+    "country": "DE",
+    "elevation": 302.0,
+    "lat": 50.8659,
+    "lon": 7.14274
+  }
+}

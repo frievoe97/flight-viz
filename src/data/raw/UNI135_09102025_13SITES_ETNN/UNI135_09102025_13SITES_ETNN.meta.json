@@ -1,0 +1,53 @@
+{
+  "start_time_berlin": "09.10.2025 20:55:24",
+  "end_time_berlin": "09.10.2025 22:05:58",
+  "duration_seconds": 4234,
+  "track_length_km": 872.927,
+  "bbox": {
+    "min_lat": 50.6717,
+    "min_lon": -1.9742,
+    "max_lat": 55.0346,
+    "max_lon": 7.3595
+  },
+  "speed_kts_min": 77,
+  "speed_kts_max": 484,
+  "speed_kts_avg": 377.1,
+  "speed_mph_min": 89,
+  "speed_mph_max": 557,
+  "speed_mph_avg": 434.0,
+  "altitude_ft_min": 50,
+  "altitude_ft_max": 35000,
+  "altitude_ft_avg": 20082,
+  "vertical_rate_fpm_min": -2070.0,
+  "vertical_rate_fpm_max": 3529.0,
+  "vertical_rate_fpm_avg": -135.1,
+  "points": 157,
+  "callsign": "UNI135",
+  "aircraft_registration": "D-CHLP",
+  "aircraft_hex": "3CD3A9",
+  "source_url": "https://www.flightaware.com/live/flight/UNI135/history/20251009/1855Z/EGNT/EDDK/tracklog",
+  "reporting_facility_departure": "FlightAware MLAT(13 sites)",
+  "reporting_facility_arrival": "FlightAware ADS-B(ETNN)",
+  "departure_airport": {
+    "icao": null,
+    "iata": null,
+    "name": null,
+    "city": null,
+    "subd": null,
+    "country": null,
+    "elevation": null,
+    "lat": null,
+    "lon": null
+  },
+  "arrival_airport": {
+    "icao": "ETNN",
+    "iata": null,
+    "name": "Norvenich Airport",
+    "city": "",
+    "subd": "Nordrhein-Westfalen",
+    "country": "DE",
+    "elevation": 382.0,
+    "lat": 50.8312,
+    "lon": 6.65817
+  }
+}
