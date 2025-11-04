@@ -8,9 +8,10 @@ type CardProps = {
   children: ReactNode
   className?: string
   style?: CSSProperties
+  actions?: ReactNode
 }
 
-export function Card({ title, subtitle, children, className, style }: CardProps) {
+export function Card({ title, subtitle, children, className, style, actions }: CardProps) {
   return (
     <div
       className={cn(
@@ -20,21 +21,26 @@ export function Card({ title, subtitle, children, className, style }: CardProps)
       style={style}
     >
       <header className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.35em] text-white/90">
-          {title}
-        </h2>
-        {subtitle ? (
-          <p className="text-xs text-[hsl(var(--muted-foreground))]">{subtitle}</p>
-        ) : null}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.35em] text-white/90">
+              {title}
+            </h2>
+            {subtitle ? (
+              <p className="text-xs text-[hsl(var(--muted-foreground))]">{subtitle}</p>
+            ) : null}
+          </div>
+          {actions ? <div className="shrink-0">{actions}</div> : null}
+        </div>
       </header>
       {children}
     </div>
   )
 }
 
-export function ChartCard({ title, subtitle, children, className, style }: CardProps) {
+export function ChartCard({ title, subtitle, children, className, style, actions }: CardProps) {
   return (
-    <Card title={title} subtitle={subtitle} className={cn('min-h-0', className)} style={style}>
+    <Card title={title} subtitle={subtitle} className={cn('min-h-0', className)} style={style} actions={actions}>
       <div className="relative flex-1">
         <ResponsiveContainer width="100%" height="100%">
           {children}
@@ -44,9 +50,9 @@ export function ChartCard({ title, subtitle, children, className, style }: CardP
   )
 }
 
-export function DetailCard({ title, subtitle, children, className, style }: CardProps) {
+export function DetailCard({ title, subtitle, children, className, style, actions }: CardProps) {
   return (
-    <Card title={title} subtitle={subtitle} className={cn('min-h-0', className)} style={style}>
+    <Card title={title} subtitle={subtitle} className={cn('min-h-0', className)} style={style} actions={actions}>
       <div className="flex flex-1 flex-col">{children}</div>
     </Card>
   )

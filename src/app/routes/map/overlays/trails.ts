@@ -71,7 +71,7 @@ export function useTrailsOverlay({
           widthUnits: 'meters',
           getWidth: 300,
           widthMinPixels: 2,
-          rounded: true,
+          jointRounded: true,
           capRounded: true,
           fadeTrail: true,
           trailLength: Math.min(trailLengthSeconds, Math.max(1, trip.duration)),

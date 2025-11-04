@@ -82,7 +82,6 @@ const SANKEY_COLORS = [
   '#8b5cf6',
 ]
 
-const BAR_BUCKET_KM = 50
 const HISTOGRAM_BINS = 8
 const MAX_SANKEY_LINKS = 6
 
@@ -331,9 +330,10 @@ export function useStatsPageState() {
     return found?.label ?? flightPickerOptions[0]?.label ?? 'Select flight'
   }, [flightPickerOptions, selectedFlightId])
 
+  // Overview aggregations respect current filters
   const flightsPerDay = useMemo(() => {
     const counts = new Map<string, number>()
-    flights.forEach((flight) => {
+    filteredFlights.forEach((flight) => {
       const start = getFlightStart(flight)
       if (!start) return
       const key = formatDateKey(start)
@@ -342,58 +342,14 @@ export function useStatsPageState() {
     return [...counts.entries()]
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([key, count]) => ({ date: formatDateLabel(key), flights: count }))
-  }, [flights])
+  }, [filteredFlights])
 
-  const altitudeByDistance = useMemo(() => {
-    const buckets = new Map<
-      number,
-      {
-        bucketStart: number
-        bucketEnd: number
-        sum: number
-        samples: number
-      }
-    >()
-
-    flights.forEach((flight) => {
-      flight.points.forEach((point) => {
-        const distance = Number.isFinite(point.distanceKm as number)
-          ? (point.distanceKm as number)
-          : null
-        const altitude = Number.isFinite(point.altitudeFeet as number)
-          ? (point.altitudeFeet as number)
-          : null
-        if (distance == null || altitude == null) return
-        const bucketIndex = Math.floor(distance / BAR_BUCKET_KM)
-        const start = bucketIndex * BAR_BUCKET_KM
-        const end = start + BAR_BUCKET_KM
-        const bucket = buckets.get(bucketIndex) ?? {
-          bucketStart: start,
-          bucketEnd: end,
-          sum: 0,
-          samples: 0,
-        }
-        bucket.sum += altitude
-        bucket.samples += 1
-        buckets.set(bucketIndex, bucket)
-      })
-    })
-
-    return [...buckets.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([, bucket]) => ({
-        bucketStart: bucket.bucketStart,
-        bucketEnd: bucket.bucketEnd,
-        midpoint: bucket.bucketStart + (bucket.bucketEnd - bucket.bucketStart) / 2,
-        altitude: bucket.samples > 0 ? bucket.sum / bucket.samples : 0,
-        sampleCount: bucket.samples,
-      }))
-  }, [flights])
+  // Removed altitudeByDistance (not insightful enough)
 
   const flightLengthHistogram = useMemo(() => {
     const counts = new Map<string, number>()
     const bucketSize = 250
-    flights.forEach((flight) => {
+    filteredFlights.forEach((flight) => {
       const distance = Number.isFinite(flight.distanceKm) ? (flight.distanceKm as number) : null
       if (distance == null) return
       const bucket = Math.floor(distance / bucketSize)
@@ -410,11 +366,11 @@ export function useStatsPageState() {
         label: `${label} km`,
         flights: count,
       }))
-  }, [flights])
+  }, [filteredFlights])
 
   const speedByDay = useMemo(() => {
     const dayStats = new Map<string, { sum: number; count: number }>()
-    flights.forEach((flight) => {
+    filteredFlights.forEach((flight) => {
       const start = getFlightStart(flight)
       if (!start) return
       const speed = flight.speedKtsStats.avg
@@ -431,11 +387,11 @@ export function useStatsPageState() {
         date: formatDateLabel(key),
         speed: count > 0 ? sum / count : 0,
       }))
-  }, [flights])
+  }, [filteredFlights])
 
   const totalFlightTimeByDay = useMemo(() => {
     const totals = new Map<string, number>()
-    flights.forEach((flight) => {
+    filteredFlights.forEach((flight) => {
       const start = getFlightStart(flight)
       if (!start) return
       const duration = flight.durationSeconds
@@ -449,10 +405,10 @@ export function useStatsPageState() {
         date: formatDateLabel(key),
         hours: seconds / 3600,
       }))
-  }, [flights])
+  }, [filteredFlights])
 
   const topFlights = useMemo(() => {
-    return [...flights]
+    return [...filteredFlights]
       .filter((flight) => Number.isFinite(flight.distanceKm))
       .sort((a, b) => (b.distanceKm ?? 0) - (a.distanceKm ?? 0))
       .slice(0, 10)
@@ -461,13 +417,13 @@ export function useStatsPageState() {
         label: truncateRouteLabel(flight.name),
         distance: flight.distanceKm ?? 0,
       }))
-  }, [flights])
+  }, [filteredFlights])
 
   const sankeyData = useMemo<SankeyDatum>(() => {
     type Flow = { origin: OptionValue; destination: OptionValue; count: number }
     const flows = new Map<string, Flow>()
 
-    flights.forEach((flight) => {
+    filteredFlights.forEach((flight) => {
       const origin = getCountryOption(flight, 'origin', regionDisplayNames)
       const destination = getCountryOption(flight, 'destination', regionDisplayNames)
 
@@ -527,7 +483,89 @@ export function useStatsPageState() {
       )
 
     return { nodes, links }
-  }, [flights, ignoreSameStartTarget, regionDisplayNames])
+  }, [filteredFlights, ignoreSameStartTarget, regionDisplayNames])
+
+  // Additional, more insightful aggregations
+  const flightsByHour = useMemo(() => {
+    const buckets = Array.from({ length: 24 }, (_, h) => ({ hour: h, flights: 0 }))
+    filteredFlights.forEach((flight) => {
+      const start = getFlightStart(flight)
+      if (!start) return
+      const h = start.getUTCHours()
+      buckets[h].flights += 1
+    })
+    return buckets.map((b) => ({ label: `${String(b.hour).padStart(2, '0')}:00`, flights: b.flights }))
+  }, [filteredFlights])
+
+  const flightsByWeekday = useMemo(() => {
+    const names = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+    const counts = Array.from({ length: 7 }, (_, d) => ({ d, flights: 0 }))
+    filteredFlights.forEach((flight) => {
+      const start = getFlightStart(flight)
+      if (!start) return
+      counts[start.getUTCDay()].flights += 1
+    })
+    return counts.map((c) => ({ label: names[c.d], flights: c.flights }))
+  }, [filteredFlights])
+
+  const durationHistogram = useMemo(() => {
+    const ranges = [0, 30, 60, 120, 240]
+    const labels = ['0–30 min', '30–60 min', '1–2 h', '2–4 h', '4+ h']
+    const counts = [0, 0, 0, 0, 0]
+    filteredFlights.forEach((flight) => {
+      const sec = flight.durationSeconds
+      if (!Number.isFinite(sec as number)) return
+      const min = (sec as number) / 60
+      let idx = ranges.findIndex((start, i) => (ranges[i + 1] ? min >= start && min < ranges[i + 1] : false))
+      if (idx === -1) idx = 4
+      counts[idx] += 1
+    })
+    return labels.map((label, i) => ({ label, flights: counts[i] }))
+  }, [filteredFlights])
+
+  const distanceDurationPoints = useMemo(() => {
+    return filteredFlights
+      .filter((f) => Number.isFinite(f.distanceKm) && Number.isFinite(f.durationSeconds as number))
+      .map((f) => ({ name: f.name, distance: f.distanceKm, hours: (f.durationSeconds as number) / 3600 }))
+  }, [filteredFlights])
+
+  const topOrigins = useMemo(() => {
+    const counts = new Map<string, { label: string; count: number }>()
+    filteredFlights.forEach((flight) => {
+      const { value, label } = getAirportOption(flight, 'origin')
+      const key = value || UNKNOWN_LABEL
+      counts.set(key, { label: label || key, count: (counts.get(key)?.count ?? 0) + 1 })
+    })
+    return [...counts.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 10)
+      .map(([value, { label, count }]) => ({ value, label, flights: count }))
+  }, [filteredFlights])
+
+  const topDestinations = useMemo(() => {
+    const counts = new Map<string, { label: string; count: number }>()
+    filteredFlights.forEach((flight) => {
+      const { value, label } = getAirportOption(flight, 'destination')
+      const key = value || UNKNOWN_LABEL
+      counts.set(key, { label: label || key, count: (counts.get(key)?.count ?? 0) + 1 })
+    })
+    return [...counts.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 10)
+      .map(([value, { label, count }]) => ({ value, label, flights: count }))
+  }, [filteredFlights])
+
+  const topAircraftTypes = useMemo(() => {
+    const counts = new Map<string, number>()
+    filteredFlights.forEach((flight) => {
+      const type = flight.meta?.aircraftFriendlyType || flight.meta?.aircraftType || 'Unbekannt'
+      counts.set(type, (counts.get(type) ?? 0) + 1)
+    })
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([label, count]) => ({ label, flights: count }))
+  }, [filteredFlights])
 
   const selectedFlightSeries = useMemo<SelectedFlightSeriesPoint[]>(() => {
     if (!selectedFlight) return []
@@ -673,7 +711,7 @@ export function useStatsPageState() {
   }, [regionDisplayNames, selectedFlight])
 
   const summary = useMemo<SummaryMetrics>(() => {
-    if (!flights.length) {
+    if (!filteredFlights.length) {
       return {
         totalFlights: 0,
         totalDistanceKm: 0,
@@ -692,7 +730,7 @@ export function useStatsPageState() {
     let altitudeCount = 0
     const routes = new Set<string>()
 
-    flights.forEach((flight) => {
+    filteredFlights.forEach((flight) => {
       if (Number.isFinite(flight.distanceKm)) {
         distanceSum += flight.distanceKm as number
       }
@@ -715,14 +753,14 @@ export function useStatsPageState() {
     })
 
     return {
-      totalFlights: flights.length,
+      totalFlights: filteredFlights.length,
       totalDistanceKm: distanceSum,
       totalDurationHours: durationSum / 3600,
       avgSpeedKmH: speedCount ? speedSum / speedCount : null,
       avgAltitudeFt: altitudeCount ? altitudeSum / altitudeCount : null,
       uniqueRoutes: routes.size,
     }
-  }, [flights])
+  }, [filteredFlights])
 
   return {
     loading: !flightData,
@@ -747,12 +785,18 @@ export function useStatsPageState() {
     availableFilterOptions,
     summary,
     flightsPerDay,
-    altitudeByDistance,
     flightLengthHistogram,
     speedByDay,
     totalFlightTimeByDay,
     topFlights,
     sankeyData,
+    flightsByHour,
+    flightsByWeekday,
+    durationHistogram,
+    distanceDurationPoints,
+    topOrigins,
+    topDestinations,
+    topAircraftTypes,
     ignoreSameStartTarget,
     setIgnoreSameStartTarget,
     flightPickerOptions,

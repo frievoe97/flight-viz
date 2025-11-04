@@ -44,6 +44,14 @@
   }
 }
 
+@layer components {
+  /* Überschreibt MapLibre-Controls */
+  .maplibregl-ctrl.maplibregl-ctrl-group {
+    top: 0rem !important;
+    right: 0rem !important;
+  }
+}
+
 @keyframes stats-fade-in {
   from {
     opacity: 0;

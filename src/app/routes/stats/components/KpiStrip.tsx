@@ -38,34 +38,34 @@ function formatAltitude(value: number | null, formatter: Intl.NumberFormat) {
 export function KpiStrip({ summary, formatter }: KpiStripProps) {
   const items = [
     {
-      label: 'Flights Tracked',
+      label: 'Erfasste Flüge',
       value: formatter.format(summary.totalFlights),
-      hint: 'Filtered dataset',
+      hint: 'Gefilterte Datenmenge',
     },
     {
-      label: 'Mission Hours',
+      label: 'Flugzeit',
       value: formatHours(summary.totalDurationHours),
-      hint: 'Total airborne time',
+      hint: 'Gesamte Flugstunden',
     },
     {
-      label: 'Distance Flown',
+      label: 'Geflogene Distanz',
       value: formatDistance(summary.totalDistanceKm, formatter),
-      hint: 'Aggregated kilometres',
+      hint: 'Kilometer gesamt',
     },
     {
-      label: 'Unique Routes',
+      label: 'Einzigartige Routen',
       value: formatter.format(summary.uniqueRoutes),
-      hint: 'Origin → destination pairs',
+      hint: 'Start → Ziel Kombinationen',
     },
     {
-      label: 'Avg Cruise Speed',
+      label: 'Ø Reisegeschwindigkeit',
       value: formatSpeed(summary.avgSpeedKmH, formatter),
-      hint: 'Across flights with data',
+      hint: 'Über Flüge mit Daten',
     },
     {
-      label: 'Avg Cruise Altitude',
+      label: 'Ø Reiseflughöhe',
       value: formatAltitude(summary.avgAltitudeFt, formatter),
-      hint: 'Across flights with data',
+      hint: 'Über Flüge mit Daten',
     },
   ]
 

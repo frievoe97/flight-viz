@@ -3,11 +3,10 @@
 
 const FEET_TO_METERS = 0.3048
 const EARTH_RADIUS_KM = 6371
-const GITHUB_OWNER = 'frievoe97'
-const GITHUB_REPO = 'flight-viz'
-const GITHUB_REF = 'python'
-const GITHUB_FLIGHTS_DIR = 'export2/flights'
-const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents`
+import JSZip from 'jszip'
+
+const FLIGHTS_ARCHIVE_URL =
+  'https://raw.githubusercontent.com/frievoe97/flight-viz/python/export2/flights.zip'
 
 export type Point = {
   position: [number, number]
@@ -236,104 +235,65 @@ function computeTrackLength(points: Array<{ latitude: number; longitude: number 
   return total
 }
 
-type GithubContent = {
-  name: string
-  path: string
-  type: 'file' | 'dir'
-  download_url: string | null
-  url: string
+type ArchiveCache = {
+  geojson: Record<string, string>
+  meta: Record<string, unknown>
 }
 
-const githubHeaders = {
-  Accept: 'application/vnd.github+json',
-}
+let archiveCache: ArchiveCache | null = null
 
-function joinGithubPath(...segments: string[]) {
-  return segments
-    .filter((segment) => segment.trim().length > 0)
-    .map((segment) => segment.split('/').map((token) => encodeURIComponent(token)).join('/'))
-    .join('/')
-}
-
-async function fetchGithubDirectory(pathSegments: string[] = []): Promise<GithubContent[]> {
-  if (typeof fetch !== 'function') return []
-  const encodedPath = joinGithubPath(GITHUB_FLIGHTS_DIR, ...pathSegments)
-  const url = `${GITHUB_API_BASE}/${encodedPath}?ref=${encodeURIComponent(GITHUB_REF)}`
-  try {
-    const response = await fetch(url, { headers: githubHeaders })
-    if (response.status === 404) return []
-    if (!response.ok) {
-      console.warn(`Failed to list GitHub directory (${response.status}): ${url}`)
-      return []
-    }
-    const data = (await response.json()) as unknown
-    return Array.isArray(data) ? (data as GithubContent[]) : []
-  } catch (error) {
-    console.warn('Failed to fetch GitHub directory', error)
-    return []
+async function loadFlightsFromArchive(metaModules: Record<string, unknown>) {
+  if (archiveCache) {
+    Object.assign(metaModules, archiveCache.meta)
+    return { ...archiveCache.geojson }
   }
-}
-
-async function fetchTextResource(url: string | null): Promise<string | null> {
-  if (!url || typeof fetch !== 'function') return null
-  try {
-    const response = await fetch(url)
-    if (!response.ok) return null
-    return await response.text()
-  } catch (error) {
-    console.warn(`Failed to fetch text resource: ${url}`, error)
-    return null
-  }
-}
-
-async function fetchJsonResource(url: string | null): Promise<unknown | null> {
-  if (!url || typeof fetch !== 'function') return null
-  try {
-    const response = await fetch(url, { headers: { Accept: 'application/json' } })
-    if (!response.ok) return null
-    return await response.json()
-  } catch (error) {
-    console.warn(`Failed to fetch JSON resource: ${url}`, error)
-    return null
-  }
-}
-
-async function loadFlightsFromGithub(metaModules: Record<string, unknown>) {
   const geojsonModules: Record<string, string> = {}
-  const rootEntries = await fetchGithubDirectory()
-  for (const entry of rootEntries) {
-    if (entry.type !== 'dir') continue
-    const childEntries = await fetchGithubDirectory([entry.name])
-    if (!childEntries.length) continue
-    const files = childEntries.filter((child) => child.type === 'file')
-    const geojsonEntry =
-      files.find((file) => file.name.toLowerCase() === 'track.geojson') ??
-      files.find((file) => file.name.toLowerCase().endsWith('.geojson'))
-    if (!geojsonEntry) continue
-
-    const [geojsonSource, summaryMeta, trackMeta] = await Promise.all([
-      fetchTextResource(geojsonEntry.download_url),
-      fetchJsonResource(
-        (files.find((file) => file.name.toLowerCase() === 'summary.json') ?? null)?.download_url ?? null
-      ),
-      fetchJsonResource(
-        (files.find((file) => file.name.toLowerCase().endsWith('.meta.json')) ?? null)?.download_url ?? null
-      ),
-    ])
-
-    if (!geojsonSource) continue
-    const normalizedGeoPath = normalizePath(geojsonEntry.path)
-    geojsonModules[normalizedGeoPath] = geojsonSource
-
-    const summaryEntry = files.find((file) => file.name.toLowerCase() === 'summary.json')
-    if (summaryMeta && summaryEntry) {
-      metaModules[normalizePath(summaryEntry.path)] = summaryMeta
+  const metaFromArchive: Record<string, unknown> = {}
+  if (typeof fetch !== 'function') return geojsonModules
+  try {
+    const response = await fetch(FLIGHTS_ARCHIVE_URL, { cache: 'no-store', mode: 'cors' })
+    if (!response.ok) {
+      console.warn(`Failed to fetch flights archive (${response.status})`)
+      return geojsonModules
     }
-    const trackMetaEntry = files.find((file) => file.name.toLowerCase().endsWith('.meta.json'))
-    if (trackMeta && trackMetaEntry) {
-      metaModules[normalizePath(trackMetaEntry.path)] = trackMeta
+    const buffer = await response.arrayBuffer()
+    const zip = await JSZip.loadAsync(buffer)
+    const tasks: Array<Promise<void>> = []
+    zip.forEach((relativePath, file) => {
+      if (file.dir) return
+      const normalized = normalizePath(relativePath)
+      if (normalized.startsWith('__MACOSX/')) return
+      if (normalized.split('/').some((segment) => segment.startsWith('._'))) return
+      const lower = normalized.toLowerCase()
+      if (lower.endsWith('.geojson')) {
+        tasks.push(
+          file.async('string').then((text) => {
+            geojsonModules[normalized] = text
+          })
+        )
+        return
+      }
+      if (lower.endsWith('.meta.json') || lower.endsWith('summary.json')) {
+        tasks.push(
+          file.async('string').then((text) => {
+            try {
+              const parsed = JSON.parse(text) as unknown
+              metaFromArchive[normalized] = parsed
+            } catch (error) {
+              console.warn(`Failed to parse meta JSON: ${normalized}`, error)
+            }
+          })
+        )
+      }
+    })
+    if (tasks.length) {
+      await Promise.all(tasks)
     }
+  } catch (error) {
+    console.warn('Failed to load flights archive', error)
   }
+  archiveCache = { geojson: geojsonModules, meta: metaFromArchive }
+  Object.assign(metaModules, metaFromArchive)
   return geojsonModules
 }
 
@@ -657,7 +617,7 @@ export async function getFlightData(): Promise<FlightData> {
       ...import.meta.glob('./raw/**/*.meta.json', { eager: true, import: 'default' }),
       ...import.meta.glob('./raw/**/summary.json', { eager: true, import: 'default' }),
     } as Record<string, unknown>
-    const remoteGeojsonModules = await loadFlightsFromGithub(metaModules)
+    const remoteGeojsonModules = await loadFlightsFromArchive(metaModules)
     Object.assign(geojsonModules, remoteGeojsonModules)
 
     const flights: Flight[] = []

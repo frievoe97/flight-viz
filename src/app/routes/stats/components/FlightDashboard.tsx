@@ -92,7 +92,7 @@ export function FlightDashboard({
         <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-[0.55rem] uppercase tracking-[0.3em] text-white/60">
-              Flight Selection
+              Flugauswahl
             </div>
             <h2 className="text-base font-semibold text-white/90">{selectedFlightDisplay}</h2>
           </div>
@@ -134,7 +134,7 @@ export function FlightDashboard({
                       </Popover.Close>
                     ))
                   ) : (
-                    <div className="px-3 py-2 text-xs text-white/50">No flights available</div>
+                    <div className="px-3 py-2 text-xs text-white/50">Keine Flüge verfügbar</div>
                   )}
                 </div>
               </Popover.Content>
@@ -142,8 +142,7 @@ export function FlightDashboard({
           </Popover.Root>
         </header>
         <p className="mt-2 text-[0.7rem] text-white/60">
-          Select a flight from the filtered dataset to animate its telemetry charts and derived
-          metrics.
+          Wähle einen Flug innerhalb der gefilterten Daten, um Telemetrie‑Charts und Kennzahlen anzuzeigen.
         </p>
       </section>
 
@@ -153,11 +152,11 @@ export function FlightDashboard({
           className="grid min-h-0 gap-6 auto-rows-[minmax(260px,1fr)] grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 pb-2"
         >
           <DetailCard
-            title="Flight Details"
+            title="Flugdaten"
             subtitle={
               selectedFlightStats
                 ? `${selectedFlightStats.originLabel} → ${selectedFlightStats.destinationLabel}`
-                : 'Select a flight to view statistics'
+                : 'Flug auswählen, um Statistiken zu sehen'
             }
             className="min-h-[280px]"
             style={flightAnimationStyle}
@@ -165,7 +164,7 @@ export function FlightDashboard({
             {selectedFlightStats ? (
               <div className="flex flex-1 flex-col justify-between gap-4 text-sm">
                 <div className="space-y-1">
-                  <div className="text-xs uppercase tracking-wide text-white/60">Countries</div>
+                  <div className="text-xs uppercase tracking-wide text-white/60">Länder</div>
                   <div className="text-sm text-white/80">
                     {selectedFlightStats.originCountry} → {selectedFlightStats.destinationCountry}
                   </div>
@@ -175,7 +174,7 @@ export function FlightDashboard({
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <StatItem
-                    label="Distance"
+                    label="Distanz"
                     value={
                       selectedFlightStats.distanceKm != null
                         ? `${nf0.format(Math.round(selectedFlightStats.distanceKm))} km`
@@ -183,11 +182,11 @@ export function FlightDashboard({
                     }
                   />
                   <StatItem
-                    label="Duration"
+                    label="Dauer"
                     value={formatDuration(selectedFlightStats.durationSeconds)}
                   />
                   <StatItem
-                    label="Avg. Speed"
+                    label="Ø Geschwindigkeit"
                     value={
                       selectedFlightStats.avgSpeed != null
                         ? `${nf0.format(Math.round(selectedFlightStats.avgSpeed))} km/h`
@@ -195,7 +194,7 @@ export function FlightDashboard({
                     }
                   />
                   <StatItem
-                    label="Avg. Altitude"
+                    label="Ø Flughöhe"
                     value={
                       selectedFlightStats.avgAltitude != null
                         ? `${nf0.format(Math.round(selectedFlightStats.avgAltitude))} ft`
@@ -203,26 +202,26 @@ export function FlightDashboard({
                     }
                   />
                   <StatItem
-                    label="Max Altitude"
+                    label="Maximale Flughöhe"
                     value={
                       selectedFlightStats.maxAltitude != null
                         ? `${nf0.format(Math.round(selectedFlightStats.maxAltitude))} ft`
                         : '–'
                     }
                   />
-                  <StatItem label="Samples" value={nf0.format(selectedFlightStats.pointCount)} />
+                  <StatItem label="Stichproben" value={nf0.format(selectedFlightStats.pointCount)} />
                 </div>
               </div>
             ) : (
               <div className="flex flex-1 items-center justify-center text-sm text-white/50">
-                No flight selected
+                Kein Flug ausgewählt
               </div>
             )}
           </DetailCard>
 
           <ChartCard
-            title="Altitude Profile"
-            subtitle="Altitude in ft plotted against distance in km"
+            title="Höhenprofil"
+            subtitle="Flughöhe in ft gegenüber Distanz in km"
             className="min-h-[280px]"
             style={flightAnimationStyle}
           >
@@ -251,7 +250,7 @@ export function FlightDashboard({
                   cursor={LINE_CURSOR_ALTITUDE}
                   formatter={(value: number) => [
                     `${Math.round(value).toLocaleString()} ft`,
-                    'Altitude',
+                    'Flughöhe',
                   ]}
                   contentStyle={tooltipStyle}
                   labelStyle={tooltipLabelStyle}
@@ -260,7 +259,7 @@ export function FlightDashboard({
                 <Area
                   type="monotone"
                   dataKey="altitude"
-                  name="Altitude"
+                  name="Flughöhe"
                   stroke="var(--flight-altitude)"
                   strokeWidth={2}
                   fill="url(#selected-flight-altitude)"
@@ -268,13 +267,13 @@ export function FlightDashboard({
                 />
               </AreaChart>
             ) : (
-              <EmptyState message="No altitude profile for this flight" />
+              <EmptyState message="Kein Höhenprofil für diesen Flug" />
             )}
           </ChartCard>
 
           <ChartCard
-            title="Speed Profile"
-            subtitle="Speed in km/h along the route"
+            title="Geschwindigkeitsprofil"
+            subtitle="Geschwindigkeit in km/h entlang der Strecke"
             className="min-h-[280px]"
             style={flightAnimationStyle}
           >
@@ -295,7 +294,7 @@ export function FlightDashboard({
                 />
                 <Tooltip
                   cursor={LINE_CURSOR_SPEED}
-                  formatter={(value: number) => [`${Math.round(value)} km/h`, 'Speed']}
+                  formatter={(value: number) => [`${Math.round(value)} km/h`, 'Geschwindigkeit']}
                   contentStyle={tooltipStyle}
                   labelStyle={tooltipLabelStyle}
                   labelFormatter={(value: number) => `${Math.round(value)} km`}
@@ -303,7 +302,7 @@ export function FlightDashboard({
                 <Line
                   type="monotone"
                   dataKey="speed"
-                  name="Speed"
+                  name="Geschwindigkeit"
                   stroke="var(--flight-speed)"
                   strokeWidth={2}
                   dot={false}
@@ -311,13 +310,13 @@ export function FlightDashboard({
                 />
               </LineChart>
             ) : (
-              <EmptyState message="No speed measurements for this flight" />
+              <EmptyState message="Keine Geschwindigkeitswerte für diesen Flug" />
             )}
           </ChartCard>
 
           <ChartCard
-            title="Vertical Rate"
-            subtitle="Climb/descent in ft/min across time"
+            title="Vertikalgeschwindigkeit"
+            subtitle="Steig-/Sinkrate in ft/min über die Zeit"
             className="min-h-[280px]"
             style={flightAnimationStyle}
           >
@@ -338,7 +337,7 @@ export function FlightDashboard({
                 />
                 <Tooltip
                   cursor={LINE_CURSOR_ALTITUDE}
-                  formatter={(value: number) => [`${Math.round(value)} ft/min`, 'Vertical rate']}
+                  formatter={(value: number) => [`${Math.round(value)} ft/min`, 'Vertikalgeschwindigkeit']}
                   contentStyle={tooltipStyle}
                   labelStyle={tooltipLabelStyle}
                   labelFormatter={(value: number) => `${Math.round(value)} min`}
@@ -346,7 +345,7 @@ export function FlightDashboard({
                 <Line
                   type="monotone"
                   dataKey="verticalRate"
-                  name="Vertical rate"
+                  name="Vertikalgeschwindigkeit"
                   stroke="var(--flight-altitude)"
                   strokeWidth={2}
                   dot={false}
@@ -354,13 +353,13 @@ export function FlightDashboard({
                 />
               </LineChart>
             ) : (
-              <EmptyState message="No vertical rate values for this flight" />
+              <EmptyState message="Keine Vertikalgeschwindigkeit für diesen Flug" />
             )}
           </ChartCard>
 
           <ChartCard
-            title="Altitude Distribution"
-            subtitle="Sample count per altitude band"
+            title="Höhenverteilung"
+            subtitle="Stichproben pro Höhenband"
             className="min-h-[280px]"
             style={flightAnimationStyle}
           >
@@ -374,20 +373,20 @@ export function FlightDashboard({
                 <YAxis tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} allowDecimals={false} />
                 <Tooltip
                   cursor={BAR_CURSOR}
-                  formatter={(value: number) => [`${value}`, 'Samples']}
+                  formatter={(value: number) => [`${value}`, 'Stichproben']}
                   contentStyle={tooltipStyle}
                   labelStyle={tooltipLabelStyle}
                 />
                 <Bar dataKey="samples" fill="var(--flight-altitude)" radius={[4, 4, 0, 0]} />
               </BarChart>
             ) : (
-              <EmptyState message="No altitude values recorded" />
+              <EmptyState message="Keine Höhenwerte vorhanden" />
             )}
           </ChartCard>
 
           <ChartCard
-            title="Speed Distribution"
-            subtitle="Sample count per speed band"
+            title="Geschwindigkeitsverteilung"
+            subtitle="Stichproben pro Geschwindigkeitsband"
             className="min-h-[280px]"
             style={flightAnimationStyle}
           >
@@ -401,14 +400,14 @@ export function FlightDashboard({
                 <YAxis tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} allowDecimals={false} />
                 <Tooltip
                   cursor={BAR_CURSOR}
-                  formatter={(value: number) => [`${value}`, 'Samples']}
+                  formatter={(value: number) => [`${value}`, 'Stichproben']}
                   contentStyle={tooltipStyle}
                   labelStyle={tooltipLabelStyle}
                 />
                 <Bar dataKey="samples" fill="var(--flight-speed)" radius={[4, 4, 0, 0]} />
               </BarChart>
             ) : (
-              <EmptyState message="No speed values recorded" />
+              <EmptyState message="Keine Geschwindigkeitswerte vorhanden" />
             )}
           </ChartCard>
         </div>
