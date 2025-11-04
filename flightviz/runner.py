@@ -23,7 +23,7 @@ from .tracklog_parser import parse_tracklog_table
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = PACKAGE_ROOT.parent
-EXPORT_ROOT = PROJECT_ROOT / "export2"
+EXPORT_ROOT = PROJECT_ROOT / "export"
 CACHE_ROOT = EXPORT_ROOT / "cache"
 FLIGHTS_CACHE_DIR = CACHE_ROOT / "flights"
 FLIGHTS_CACHE_JSON = FLIGHTS_CACHE_DIR / "cache.json"
@@ -628,6 +628,7 @@ def main(csv_path: str | None = None) -> None:
 
     flights = read_flights_csv(str(resolve_csv_path(csv_path)))
     process_flights(flights)
+    create_export_archive()
 
 
 def reset_export_directory() -> None:
@@ -653,3 +654,16 @@ def resolve_csv_path(csv_path: str | None) -> Path:
     if not default.is_absolute():
         default = (PROJECT_ROOT / default).resolve()
     return default
+
+
+def create_export_archive() -> None:
+    """Create a ZIP archive of the exported flight data."""
+    if not EXPORT_FLIGHTS_DIR.exists():
+        return
+
+    zip_base = EXPORT_ROOT / "flights"
+    zip_path = zip_base.with_suffix(".zip")
+    if zip_path.exists():
+        zip_path.unlink()
+
+    shutil.make_archive(str(zip_base), "zip", root_dir=EXPORT_ROOT, base_dir="flights")
