@@ -3,6 +3,11 @@
 
 const FEET_TO_METERS = 0.3048
 const EARTH_RADIUS_KM = 6371
+const GITHUB_OWNER = 'frievoe97'
+const GITHUB_REPO = 'flight-viz'
+const GITHUB_REF = 'python'
+const GITHUB_FLIGHTS_DIR = 'export2/flights'
+const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents`
 
 export type Point = {
   position: [number, number]
@@ -38,8 +43,8 @@ export type AirportMeta = {
 }
 
 export type FlightMeta = {
-  startTimeBerlin: string | null
-  endTimeBerlin: string | null
+  startTimeUtc: string | null
+  endTimeUtc: string | null
   durationSeconds: number | null
   trackLengthKm: number | null
   bbox: BoundingBox | null
@@ -51,6 +56,14 @@ export type FlightMeta = {
   callsign: string | null
   aircraftRegistration: string | null
   aircraftHex: string | null
+  aircraftFriendlyType: string | null
+  aircraftMake: string | null
+  aircraftModel: string | null
+  aircraftType: string | null
+  operator: string | null
+  engineCategory: string | null
+  engineType: string | null
+  flightType: string | null
   sourceUrl: string | null
   reportingFacilityDeparture: string | null
   reportingFacilityArrival: string | null
@@ -223,6 +236,107 @@ function computeTrackLength(points: Array<{ latitude: number; longitude: number 
   return total
 }
 
+type GithubContent = {
+  name: string
+  path: string
+  type: 'file' | 'dir'
+  download_url: string | null
+  url: string
+}
+
+const githubHeaders = {
+  Accept: 'application/vnd.github+json',
+}
+
+function joinGithubPath(...segments: string[]) {
+  return segments
+    .filter((segment) => segment.trim().length > 0)
+    .map((segment) => segment.split('/').map((token) => encodeURIComponent(token)).join('/'))
+    .join('/')
+}
+
+async function fetchGithubDirectory(pathSegments: string[] = []): Promise<GithubContent[]> {
+  if (typeof fetch !== 'function') return []
+  const encodedPath = joinGithubPath(GITHUB_FLIGHTS_DIR, ...pathSegments)
+  const url = `${GITHUB_API_BASE}/${encodedPath}?ref=${encodeURIComponent(GITHUB_REF)}`
+  try {
+    const response = await fetch(url, { headers: githubHeaders })
+    if (response.status === 404) return []
+    if (!response.ok) {
+      console.warn(`Failed to list GitHub directory (${response.status}): ${url}`)
+      return []
+    }
+    const data = (await response.json()) as unknown
+    return Array.isArray(data) ? (data as GithubContent[]) : []
+  } catch (error) {
+    console.warn('Failed to fetch GitHub directory', error)
+    return []
+  }
+}
+
+async function fetchTextResource(url: string | null): Promise<string | null> {
+  if (!url || typeof fetch !== 'function') return null
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return null
+    return await response.text()
+  } catch (error) {
+    console.warn(`Failed to fetch text resource: ${url}`, error)
+    return null
+  }
+}
+
+async function fetchJsonResource(url: string | null): Promise<unknown | null> {
+  if (!url || typeof fetch !== 'function') return null
+  try {
+    const response = await fetch(url, { headers: { Accept: 'application/json' } })
+    if (!response.ok) return null
+    return await response.json()
+  } catch (error) {
+    console.warn(`Failed to fetch JSON resource: ${url}`, error)
+    return null
+  }
+}
+
+async function loadFlightsFromGithub(metaModules: Record<string, unknown>) {
+  const geojsonModules: Record<string, string> = {}
+  const rootEntries = await fetchGithubDirectory()
+  for (const entry of rootEntries) {
+    if (entry.type !== 'dir') continue
+    const childEntries = await fetchGithubDirectory([entry.name])
+    if (!childEntries.length) continue
+    const files = childEntries.filter((child) => child.type === 'file')
+    const geojsonEntry =
+      files.find((file) => file.name.toLowerCase() === 'track.geojson') ??
+      files.find((file) => file.name.toLowerCase().endsWith('.geojson'))
+    if (!geojsonEntry) continue
+
+    const [geojsonSource, summaryMeta, trackMeta] = await Promise.all([
+      fetchTextResource(geojsonEntry.download_url),
+      fetchJsonResource(
+        (files.find((file) => file.name.toLowerCase() === 'summary.json') ?? null)?.download_url ?? null
+      ),
+      fetchJsonResource(
+        (files.find((file) => file.name.toLowerCase().endsWith('.meta.json')) ?? null)?.download_url ?? null
+      ),
+    ])
+
+    if (!geojsonSource) continue
+    const normalizedGeoPath = normalizePath(geojsonEntry.path)
+    geojsonModules[normalizedGeoPath] = geojsonSource
+
+    const summaryEntry = files.find((file) => file.name.toLowerCase() === 'summary.json')
+    if (summaryMeta && summaryEntry) {
+      metaModules[normalizePath(summaryEntry.path)] = summaryMeta
+    }
+    const trackMetaEntry = files.find((file) => file.name.toLowerCase().endsWith('.meta.json'))
+    if (trackMeta && trackMetaEntry) {
+      metaModules[normalizePath(trackMetaEntry.path)] = trackMeta
+    }
+  }
+  return geojsonModules
+}
+
 function parseEuDateTime(token: string | null | undefined) {
   if (!token) return null
   const parts = token.trim().split(/\s+/)
@@ -265,9 +379,14 @@ function normalizeMeta(metaRaw: unknown): FlightMeta | null {
     return null
   })()
 
+  const startTimeUtc =
+    toStringOrNull(m['start_time_utc']) ?? toStringOrNull(m['start_time_berlin']) ?? null
+  const endTimeUtc =
+    toStringOrNull(m['end_time_utc']) ?? toStringOrNull(m['end_time_berlin']) ?? null
+
   return {
-    startTimeBerlin: toStringOrNull(m['start_time_berlin']),
-    endTimeBerlin: toStringOrNull(m['end_time_berlin']),
+    startTimeUtc,
+    endTimeUtc,
     durationSeconds: toNumber(m['duration_seconds']),
     trackLengthKm: toNumber(m['track_length_km']),
     bbox,
@@ -283,6 +402,14 @@ function normalizeMeta(metaRaw: unknown): FlightMeta | null {
     callsign: toStringOrNull(m['callsign']),
     aircraftRegistration: toStringOrNull(m['aircraft_registration']),
     aircraftHex: toStringOrNull(m['aircraft_hex'])?.toUpperCase() ?? null,
+    aircraftFriendlyType: toStringOrNull(m['aircraft_friendly_type']),
+    aircraftMake: toStringOrNull(m['aircraft_make']),
+    aircraftModel: toStringOrNull(m['aircraft_model']),
+    aircraftType: toStringOrNull(m['aircraft_type']),
+    operator: toStringOrNull(m['operator']),
+    engineCategory: toStringOrNull(m['engine_category']),
+    engineType: toStringOrNull(m['engine_type']),
+    flightType: toStringOrNull(m['type']),
     sourceUrl: toStringOrNull(m['source_url']),
     reportingFacilityDeparture: toStringOrNull(m['reporting_facility_departure']),
     reportingFacilityArrival: toStringOrNull(m['reporting_facility_arrival']),
@@ -298,6 +425,30 @@ type LineStringFeature = {
 }
 type FeatureCollection = { type: 'FeatureCollection'; features?: unknown[] }
 
+function normalizePath(value: string) {
+  return value.replace(/\\/g, '/')
+}
+
+function resolveMetaFor(path: string, metaModules: Record<string, unknown>) {
+  const normalized = normalizePath(path)
+  const candidates = Array.from(
+    new Set([
+      normalized.replace(/\.geojson$/i, '.meta.json'),
+      normalized.replace(/\.geojson$/i, '.summary.json'),
+      normalized.replace(/\/track\.geojson$/i, '/summary.json'),
+      normalized.replace(/\/track\.geojson$/i, '/track.meta.json'),
+    ])
+  )
+  for (const candidate of candidates) {
+    if (candidate in metaModules) return metaModules[candidate]
+  }
+  const directory = normalized.slice(0, normalized.lastIndexOf('/') + 1)
+  for (const [metaPath, metaValue] of Object.entries(metaModules)) {
+    if (normalizePath(metaPath).startsWith(directory)) return metaValue
+  }
+  return null
+}
+
 function buildFlight(path: string, geojsonSource: string, metaModules: Record<string, unknown>) {
   let geojson: unknown
   try {
@@ -306,12 +457,16 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
     console.warn(`Failed to parse GeoJSON for ${path}:`, error)
     return null
   }
-  const filename = path.split('/').pop() ?? 'flight.geojson'
-  const id = filename.replace(/\.geojson$/i, '')
-  const fallbackCodes = extractAirportCodes(id)
+  const normalizedPath = normalizePath(path)
+  const pathTokens = normalizedPath.split('/')
+  const filename = pathTokens[pathTokens.length - 1] ?? 'flight.geojson'
+  const folderName = pathTokens.length > 1 ? pathTokens[pathTokens.length - 2] : ''
+  const baseId = filename.replace(/\.geojson$/i, '')
+  const codeSource = baseId === 'track' ? folderName : baseId
+  const id = codeSource || baseId || folderName || 'flight'
+  const fallbackCodes = extractAirportCodes(codeSource)
 
-  const metaKey = path.replace(/\.geojson$/i, '.meta.json')
-  const metaRaw = metaModules[metaKey]
+  const metaRaw = resolveMetaFor(path, metaModules)
   const normalizedMeta = normalizeMeta(metaRaw)
 
   const deriveAirportCode = (airport: AirportMeta | null | undefined, fallback: string | null) => {
@@ -356,7 +511,11 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
   const speedMphArray = propArray('speed_mph')
   const verticalRateArray = propArray('vertical_rate_fpm')
   const facilityArray = propArray('reporting_facility')
-  const timeArray = propArray('time_europe_berlin')
+  const timeArray = (() => {
+    const utcArray = propArray('time_utc')
+    if (utcArray.length) return utcArray
+    return propArray('time_europe_berlin')
+  })()
 
   const altitudeValues: number[] = []
   const speedKtsValues: number[] = []
@@ -489,8 +648,17 @@ let cached: Promise<FlightData> | null = null
 export async function getFlightData(): Promise<FlightData> {
   if (cached) return cached
   cached = (async () => {
-    const geojsonModules = import.meta.glob('./raw/**/*.geojson', { eager: true, import: 'default', query: '?raw' }) as Record<string, string>
-    const metaModules = import.meta.glob('./raw/**/*.meta.json', { eager: true, import: 'default' }) as Record<string, unknown>
+    const geojsonModules = import.meta.glob('./raw/**/*.geojson', {
+      eager: true,
+      import: 'default',
+      query: '?raw',
+    }) as Record<string, string>
+    const metaModules = {
+      ...import.meta.glob('./raw/**/*.meta.json', { eager: true, import: 'default' }),
+      ...import.meta.glob('./raw/**/summary.json', { eager: true, import: 'default' }),
+    } as Record<string, unknown>
+    const remoteGeojsonModules = await loadFlightsFromGithub(metaModules)
+    Object.assign(geojsonModules, remoteGeojsonModules)
 
     const flights: Flight[] = []
     const flightSegments: FlightSegment[] = []

@@ -24,9 +24,10 @@ export function parseEuDateTime(raw: string | null | undefined) {
   return new Date(Date.UTC(year, month - 1, day, hour, minute, second))
 }
 
-export function getMetaDateString(flight: Flight, key: 'startTimeBerlin' | 'endTimeBerlin') {
+export function getMetaDateString(flight: Flight, key: 'startTimeUtc' | 'endTimeUtc') {
   if (!flight.meta) return null
-  return flight.meta[key]
+  const value = flight.meta[key]
+  return value ?? null
 }
 
 export function getAirportMeta(flight: Flight, role: AirportRole) {
@@ -91,7 +92,7 @@ export function getCountryOption(
 }
 
 export function getFlightStart(flight: Flight) {
-  const fromMeta = parseEuDateTime(getMetaDateString(flight, 'startTimeBerlin'))
+  const fromMeta = parseEuDateTime(getMetaDateString(flight, 'startTimeUtc'))
   if (fromMeta) return fromMeta
   const firstTimestamp = flight.points.find((p) => p.timeLabel)?.timeLabel
   return parseEuDateTime(firstTimestamp ?? undefined)
