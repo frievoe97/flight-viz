@@ -6,7 +6,7 @@ const EARTH_RADIUS_KM = 6371
 import JSZip from 'jszip'
 
 const FLIGHTS_ARCHIVE_URL =
-  'https://raw.githubusercontent.com/frievoe97/flight-viz/python/export2/flights.zip'
+  'https://raw.githubusercontent.com/frievoe97/flight-viz/python/export/flights.zip'
 
 export type Point = {
   position: [number, number]
@@ -131,7 +131,9 @@ export type FlightData = {
 
 function toNumber(rawValue: unknown): number | null {
   if (rawValue == null || rawValue === '') return null
-  const normalized = String(rawValue).replace(/[^0-9+\-.,]/g, '').replace(',', '.')
+  const normalized = String(rawValue)
+    .replace(/[^0-9+\-.,]/g, '')
+    .replace(',', '.')
   if (!normalized) return null
   const parsed = Number.parseFloat(normalized)
   return Number.isFinite(parsed) ? parsed : null
@@ -448,11 +450,14 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
     const feats = Array.isArray((g as FeatureCollection).features)
       ? ((g as FeatureCollection).features as unknown[])
       : []
-    const found = feats.find((candidate) =>
-      (candidate as LineStringFeature)?.geometry?.type === 'LineString'
+    const found = feats.find(
+      (candidate) => (candidate as LineStringFeature)?.geometry?.type === 'LineString'
     )
     feature = found ? (found as LineStringFeature) : null
-  } else if ((g as LineStringFeature)?.type === 'Feature' && (g as LineStringFeature).geometry?.type === 'LineString') {
+  } else if (
+    (g as LineStringFeature)?.type === 'Feature' &&
+    (g as LineStringFeature).geometry?.type === 'LineString'
+  ) {
     feature = g as LineStringFeature
   }
   if (!feature) return null
@@ -492,7 +497,9 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
 
     const altitudeFeet = toNumber(altitudeArray[i])
     if (Number.isFinite(altitudeFeet)) altitudeValues.push(altitudeFeet as number)
-    const altitudeMeters = Number.isFinite(altitudeFeet as number) ? (altitudeFeet as number) * FEET_TO_METERS : 0
+    const altitudeMeters = Number.isFinite(altitudeFeet as number)
+      ? (altitudeFeet as number) * FEET_TO_METERS
+      : 0
 
     const speedKts = toNumber(speedKtsArray[i])
     if (Number.isFinite(speedKts)) speedKtsValues.push(speedKts as number)
@@ -512,7 +519,16 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
     const facilityRaw = typeof facilityArray[i] === 'string' ? (facilityArray[i] as string) : null
     const facility = facilityRaw ? facilityRaw.trim().replace(/\s+/g, ' ') : null
 
-    points.push({ position: [lon, lat], altitudeFeet, altitudeMeters, speedKts, speedMph, verticalRateFpm, timeLabel, facility })
+    points.push({
+      position: [lon, lat],
+      altitudeFeet,
+      altitudeMeters,
+      speedKts,
+      speedMph,
+      verticalRateFpm,
+      timeLabel,
+      facility,
+    })
   }
   if (points.length < 2) return null
 
@@ -524,7 +540,12 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
       continue
     }
     const previous = points[i - 1]
-    cumulativeDistanceKm += haversineDistanceKm(previous.position[1], previous.position[0], point.position[1], point.position[0])
+    cumulativeDistanceKm += haversineDistanceKm(
+      previous.position[1],
+      previous.position[0],
+      point.position[1],
+      point.position[0]
+    )
     point.distanceKm = cumulativeDistanceKm
   }
 
@@ -533,7 +554,9 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
   const speedMphStats = calcStats(points.map((p) => p.speedMph))
   const verticalRateStats = calcStats(points.map((p) => p.verticalRateFpm))
 
-  const { latitude, longitude } = centerOf(points.map((p) => ({ latitude: p.position[1], longitude: p.position[0] })))
+  const { latitude, longitude } = centerOf(
+    points.map((p) => ({ latitude: p.position[1], longitude: p.position[0] }))
+  )
   const positions = points.map((p) => ({ latitude: p.position[1], longitude: p.position[0] }))
 
   const name = (() => {
@@ -545,16 +568,18 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
   const pointCount = points.length
 
   const distanceKm = normalizedMeta?.trackLengthKm ?? computeTrackLength(positions)
-  const durationSeconds = normalizedMeta?.durationSeconds ?? (() => {
-    const timestamps = points
-      .map((p) => (p.timeLabel ? parseEuDateTime(p.timeLabel)?.getTime() ?? null : null))
-      .filter((t): t is number => Number.isFinite(t as number))
-    if (!timestamps.length) return null
-    const first = timestamps[0]
-    const last = timestamps[timestamps.length - 1]
-    const delta = (last - first) / 1000
-    return Number.isFinite(delta) && delta >= 0 ? delta : null
-  })()
+  const durationSeconds =
+    normalizedMeta?.durationSeconds ??
+    (() => {
+      const timestamps = points
+        .map((p) => (p.timeLabel ? (parseEuDateTime(p.timeLabel)?.getTime() ?? null) : null))
+        .filter((t): t is number => Number.isFinite(t as number))
+      if (!timestamps.length) return null
+      const first = timestamps[0]
+      const last = timestamps[timestamps.length - 1]
+      const delta = (last - first) / 1000
+      return Number.isFinite(delta) && delta >= 0 ? delta : null
+    })()
 
   const mergedAltitudeStats = mergeStats(normalizedMeta?.altitudeFt, altitudeStats)
   const mergedSpeedKtsStats = mergeStats(normalizedMeta?.speedKts, speedKtsStats)
@@ -645,11 +670,17 @@ export async function getFlightData(): Promise<FlightData> {
 
       const distanceKm = Number.isFinite(flight.distanceKm) ? flight.distanceKm : 0
       totals.distanceKm += distanceKm
-      const durationSeconds = Number.isFinite(flight.durationSeconds as number) ? (flight.durationSeconds as number) : 0
+      const durationSeconds = Number.isFinite(flight.durationSeconds as number)
+        ? (flight.durationSeconds as number)
+        : 0
       totals.durationSeconds += durationSeconds
-      const altitudeMax = Number.isFinite(flight.altitudeStats.max as number) ? (flight.altitudeStats.max as number) : 0
+      const altitudeMax = Number.isFinite(flight.altitudeStats.max as number)
+        ? (flight.altitudeStats.max as number)
+        : 0
       totals.maxAltitudeFeet = Math.max(totals.maxAltitudeFeet, altitudeMax)
-      const speedMax = Number.isFinite(flight.speedKtsStats.max as number) ? (flight.speedKtsStats.max as number) : 0
+      const speedMax = Number.isFinite(flight.speedKtsStats.max as number)
+        ? (flight.speedKtsStats.max as number)
+        : 0
       totals.maxSpeedKts = Math.max(totals.maxSpeedKts, speedMax)
 
       const metaPointsNum = flight.meta?.points
@@ -671,14 +702,24 @@ export async function getFlightData(): Promise<FlightData> {
       totalFlights: flights.length,
       totalDistanceKm: totals.distanceKm,
       totalDurationSeconds: totals.durationSeconds,
-      averageSpeedKts: totals.speedWeight > 0 ? totals.speedKtsWeightedSum / totals.speedWeight : null,
-      averageAltitudeFt: totals.altitudeWeight > 0 ? totals.altitudeFtWeightedSum / totals.altitudeWeight : null,
+      averageSpeedKts:
+        totals.speedWeight > 0 ? totals.speedKtsWeightedSum / totals.speedWeight : null,
+      averageAltitudeFt:
+        totals.altitudeWeight > 0 ? totals.altitudeFtWeightedSum / totals.altitudeWeight : null,
       maxAltitudeFt: totals.maxAltitudeFeet,
       maxSpeedKts: totals.maxSpeedKts,
     }
 
     const { latitude, longitude } = centerOf(allPositions)
-    const INITIAL_VIEW_STATE = { latitude, longitude, zoom: 3.2, maxZoom: 12, pitch: 0, maxPitch: 0, bearing: 0 }
+    const INITIAL_VIEW_STATE = {
+      latitude,
+      longitude,
+      zoom: 3.2,
+      maxZoom: 12,
+      pitch: 0,
+      maxPitch: 0,
+      bearing: 0,
+    }
 
     return { flights, flightSegments, aggregatedStats, INITIAL_VIEW_STATE }
   })()
