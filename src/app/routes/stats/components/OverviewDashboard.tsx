@@ -98,11 +98,7 @@ export function OverviewDashboard({
         </BarChart>
       </ChartCard>
 
-      <ChartCard
-        title="Flüge pro Stunde"
-        subtitle="Startzeit (UTC)"
-        className="min-h-[280px]"
-      >
+      <ChartCard title="Flüge pro Stunde" subtitle="Startzeit (UTC)" className="min-h-[280px]">
         <BarChart data={flightsByHour} margin={{ left: -18, right: 12, top: 12, bottom: 12 }}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis dataKey="label" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} interval={0} />
@@ -117,7 +113,10 @@ export function OverviewDashboard({
         subtitle="Histogramm der aufgezeichneten Streckenlängen"
         className="min-h-[280px]"
       >
-        <BarChart data={flightLengthHistogram} margin={{ left: -24, right: 16, top: 12, bottom: 12 }}>
+        <BarChart
+          data={flightLengthHistogram}
+          margin={{ left: -24, right: 16, top: 12, bottom: 12 }}
+        >
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis dataKey="label" tick={{ fill: 'var(--chart-axis)', fontSize: 11 }} interval={0} />
           <YAxis tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} allowDecimals={false} />
@@ -131,7 +130,11 @@ export function OverviewDashboard({
         </BarChart>
       </ChartCard>
 
-      <ChartCard title="Ø Geschwindigkeit" subtitle="Täglicher Durchschnitt (km/h)" className="min-h-[280px]">
+      <ChartCard
+        title="Ø Geschwindigkeit"
+        subtitle="Täglicher Durchschnitt (km/h)"
+        className="min-h-[280px]"
+      >
         <LineChart data={speedByDay} margin={{ left: -12, right: 12, top: 12, bottom: 12 }}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="4 2" />
           <XAxis dataKey="date" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} />
@@ -160,7 +163,11 @@ export function OverviewDashboard({
         subtitle="Distanz in Kilometern"
         className="min-h-[280px]"
       >
-        <BarChart data={topFlights} layout="vertical" margin={{ left: 16, right: 24, top: 12, bottom: 12 }}>
+        <BarChart
+          data={topFlights}
+          layout="vertical"
+          margin={{ left: 16, right: 24, top: 12, bottom: 12 }}
+        >
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis
             type="number"
@@ -216,7 +223,11 @@ export function OverviewDashboard({
         </BarChart>
       </ChartCard>
 
-      <ChartCard title="Flugdauer‑Verteilung" subtitle="Buckets in Minuten/Stunden" className="min-h-[280px]">
+      <ChartCard
+        title="Flugdauer‑Verteilung"
+        subtitle="Buckets in Minuten/Stunden"
+        className="min-h-[280px]"
+      >
         <BarChart data={durationHistogram} margin={{ left: -24, right: 12, top: 12, bottom: 12 }}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis dataKey="label" tick={{ fill: 'var(--chart-axis)', fontSize: 11 }} interval={0} />
@@ -229,29 +240,62 @@ export function OverviewDashboard({
       <ChartCard title="Distanz vs. Dauer" subtitle="km vs. Stunden" className="min-h-[280px]">
         <ScatterChart margin={{ left: -12, right: 12, top: 12, bottom: 12 }}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
-          <XAxis dataKey="distance" name="Distanz" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} tickFormatter={(v) => `${Math.round(v)} km`} />
-          <YAxis dataKey="hours" name="Dauer" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} tickFormatter={(v) => `${v.toFixed(1)} h`} />
+
+          <XAxis
+            dataKey="distance"
+            name="Distanz"
+            type="number" // numerische Skalierung erzwingen
+            tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
+            tickFormatter={(v) => `${Math.round(v)} km`}
+          />
+
+          <YAxis
+            dataKey="hours"
+            name="Dauer"
+            tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
+            tickFormatter={(v) => `${v.toFixed(1)} h`}
+          />
+
           <ZAxis range={[80, 120]} />
+
           <Tooltip
             cursor={{ stroke: 'rgba(56,189,248,0.35)' }}
             contentStyle={tooltipStyle}
             labelStyle={tooltipLabelStyle}
-            formatter={(value: number, name: string) => {
-              if (name === 'hours') return [`${(value as number).toFixed(2)} h`, 'Dauer']
-              if (name === 'distance') return [`${Math.round(value as number)} km`, 'Distanz']
+            formatter={(value: string | number, name: string) => {
+              if (name === 'hours' && typeof value === 'number') {
+                return [`${value.toFixed(2)} h`, 'Dauer']
+              }
+              if (name === 'distance' && typeof value === 'number') {
+                return [`${Math.round(value)} km`, 'Distanz']
+              }
               return [String(value), name]
             }}
-            labelFormatter={(_label, payload) => payload?.[0]?.payload?.name ?? ''}
+            labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? ''}
           />
-          <Scatter data={distanceDurationPoints} fill="var(--flight-speed)" />
+
+          {/* 👉 Daten hier sortieren, wo distanceDurationPoints existiert */}
+          <Scatter
+            data={[...distanceDurationPoints].sort((a, b) => a.distance - b.distance)}
+            fill="var(--flight-speed)"
+          />
         </ScatterChart>
       </ChartCard>
 
       <ChartCard title="Top Start‑Flughäfen" subtitle="Anzahl Flüge" className="min-h-[280px]">
-        <BarChart data={topOrigins} layout="vertical" margin={{ left: 16, right: 24, top: 12, bottom: 12 }}>
+        <BarChart
+          data={topOrigins}
+          layout="vertical"
+          margin={{ left: 16, right: 24, top: 12, bottom: 12 }}
+        >
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis type="number" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} />
-          <YAxis dataKey="value" type="category" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} width={72} />
+          <YAxis
+            dataKey="value"
+            type="category"
+            tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
+            width={72}
+          />
           <Tooltip
             cursor={BAR_CURSOR}
             contentStyle={tooltipStyle}
@@ -263,10 +307,19 @@ export function OverviewDashboard({
       </ChartCard>
 
       <ChartCard title="Top Ziel‑Flughäfen" subtitle="Anzahl Flüge" className="min-h-[280px]">
-        <BarChart data={topDestinations} layout="vertical" margin={{ left: 16, right: 24, top: 12, bottom: 12 }}>
+        <BarChart
+          data={topDestinations}
+          layout="vertical"
+          margin={{ left: 16, right: 24, top: 12, bottom: 12 }}
+        >
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis type="number" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} />
-          <YAxis dataKey="value" type="category" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} width={72} />
+          <YAxis
+            dataKey="value"
+            type="category"
+            tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
+            width={72}
+          />
           <Tooltip
             cursor={BAR_CURSOR}
             contentStyle={tooltipStyle}
@@ -278,7 +331,11 @@ export function OverviewDashboard({
       </ChartCard>
 
       <ChartCard title="Top Flugzeugtypen" subtitle="Anzahl Flüge (Meta)" className="min-h-[280px]">
-        <BarChart data={topAircraftTypes} layout="vertical" margin={{ left: 16, right: 24, top: 12, bottom: 12 }}>
+        <BarChart
+          data={topAircraftTypes}
+          layout="vertical"
+          margin={{ left: 16, right: 24, top: 12, bottom: 12 }}
+        >
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis type="number" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} />
           <YAxis
@@ -288,11 +345,7 @@ export function OverviewDashboard({
             width={140}
             tickFormatter={(value: string) => abbreviateType(value)}
           />
-          <Tooltip
-            cursor={BAR_CURSOR}
-            contentStyle={tooltipStyle}
-            labelStyle={tooltipLabelStyle}
-          />
+          <Tooltip cursor={BAR_CURSOR} contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} />
           <Bar dataKey="flights" fill="var(--flight-speed)" radius={[0, 4, 4, 0]} />
         </BarChart>
       </ChartCard>
