@@ -3,7 +3,7 @@ name: Daily Deploy
 
 on:
   schedule:
-    - cron: '30 0 * * *'   # täglich 00:30 UTC
+    - cron: '30 0 * * *' # täglich 00:30 UTC
   workflow_dispatch:
 
 # WICHTIG: Token muss schreiben dürfen (bei schedule sonst read-only)
@@ -47,5 +47,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npx gh-pages -d dist \
-            -r https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git \
-            -b gh-pages
+            -r "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" \
+            -b gh-pages \
+            -m "deploy: ${GITHUB_SHA}"
