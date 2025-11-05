@@ -1,13 +1,21 @@
+# .github/workflows/deploy.yml
 name: Daily Deploy
 
 on:
   schedule:
-    - cron: '30 0 * * *'
+    - cron: '30 0 * * *'   # täglich 00:30 UTC
   workflow_dispatch:
+
+# WICHTIG: Token muss schreiben dürfen (bei schedule sonst read-only)
+permissions:
+  contents: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-gh-pages
+      cancel-in-progress: false
 
     steps:
       - name: Checkout repository
@@ -15,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Node.js
+      - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -24,7 +32,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Deploy
+      - name: Build
+        run: |
+          npm run build
+          cp dist/index.html dist/404.html
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Deploy to gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run deploy
+        run: |
+          npx gh-pages -d dist \
+            -r https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git \
+            -b gh-pages
