@@ -7,7 +7,7 @@ import logging
 import math
 import re
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -33,6 +33,17 @@ EXPORT_FLIGHTS_DIR = EXPORT_ROOT / "flights"
 
 EARTH_RADIUS_KM = 6371.0088
 MAX_SPEED_FILL_KTS = 750  # simple sanity cap for derived speeds
+TIME_GAP_SECONDS = 120
+INTERPOLATION_STEP_SECONDS = 30
+INTERPOLATED_NUMERIC_COLUMNS = {
+    "latitude",
+    "longitude",
+    "altitude_ft",
+    "course_deg_clockwise_from_north",
+    "speed_kts",
+    "speed_mph",
+    "vertical_rate_fpm",
+}
 
 TARGETING_PATTERN = re.compile(r"\.setTargeting\('([^']+)',\s*'([^']*)'\)")
 TARGETING_KEYS = {
@@ -122,10 +133,11 @@ def export_tracklog(
     flight_metadata: Dict[str, str],
 ) -> None:
     """Write the parsed tracklog CSV, summary JSON and GeoJSON to disk."""
-    df = df_main.copy()
-    fill_missing_speed_from_positions(df, metadata.get("time_column"))
+    df = interpolate_time_gaps(df_main.copy(), metadata.get("time_column"))
+    speed_filled = fill_missing_speed_from_positions(df, metadata.get("time_column"))
     ensure_speed_mph_column(df)
-    normalize_altitude_and_rates(df)
+    altitude_filled = normalize_altitude_and_rates(df)
+    mark_computed_rows(df, speed_filled, altitude_filled)
     time_info = extract_time_info(df, metadata.get("time_column"))
 
     resolved_airports = resolve_airports(entry, tracklog_airports)
@@ -261,6 +273,60 @@ def select_airport(
     return selected_record, source_label, source_detail
 
 
+def interpolate_time_gaps(df: pd.DataFrame, time_column: Optional[str]) -> pd.DataFrame:
+    """Insert interpolated rows when gaps exceed ``TIME_GAP_SECONDS``."""
+    if df.empty:
+        df["value_origin"] = pd.Series(dtype="object")
+        return df
+
+    if not time_column or time_column not in df.columns:
+        df["value_origin"] = pd.Series(["original"] * len(df))
+        return df
+
+    times = pd.to_datetime(df[time_column], format="%d.%m.%Y %H:%M:%S", errors="coerce")
+    columns = list(df.columns)
+    new_rows: List[Dict[str, Any]] = []
+    origins: List[str] = []
+
+    for idx in range(len(df)):
+        current_row = df.iloc[idx]
+        new_rows.append(current_row.to_dict())
+        origins.append("original")
+
+        if idx == len(df) - 1:
+            continue
+
+        current_time = times.iloc[idx]
+        next_time = times.iloc[idx + 1]
+        if pd.isna(current_time) or pd.isna(next_time):
+            continue
+
+        gap_seconds = (next_time - current_time).total_seconds()
+        if gap_seconds <= TIME_GAP_SECONDS:
+            continue
+
+        prev_series = df.iloc[idx]
+        next_series = df.iloc[idx + 1]
+        insert_time = current_time + timedelta(seconds=INTERPOLATION_STEP_SECONDS)
+        while insert_time < next_time:
+            fraction = (insert_time - current_time).total_seconds() / gap_seconds
+            interpolated_row: Dict[str, Any] = {}
+            for col in columns:
+                if col == time_column:
+                    interpolated_row[col] = insert_time.strftime("%d.%m.%Y %H:%M:%S")
+                elif col in INTERPOLATED_NUMERIC_COLUMNS:
+                    interpolated_row[col] = _interpolate_numeric(prev_series[col], next_series[col], fraction)
+                else:
+                    interpolated_row[col] = prev_series[col]
+            new_rows.append(interpolated_row)
+            origins.append("interpolated")
+            insert_time += timedelta(seconds=INTERPOLATION_STEP_SECONDS)
+
+    new_df = pd.DataFrame(new_rows, columns=columns)
+    new_df.insert(len(columns), "value_origin", origins)
+    return new_df.reset_index(drop=True)
+
+
 def ensure_speed_mph_column(df: pd.DataFrame) -> None:
     """Guarantee a ``speed_mph`` column based on ``speed_kts`` if missing."""
     if "speed_mph" in df.columns:
@@ -281,27 +347,34 @@ def ensure_speed_mph_column(df: pd.DataFrame) -> None:
     df["speed_mph"] = pd.to_numeric(mph_numeric, errors="coerce").round().astype("Int64")
 
 
-def normalize_altitude_and_rates(df: pd.DataFrame) -> None:
+def normalize_altitude_and_rates(df: pd.DataFrame) -> pd.Series:
     """Fill sensible defaults for missing altitude and vertical-rate values."""
+    filled_mask = pd.Series([False] * len(df), index=df.index)
     if "altitude_ft" in df.columns:
         altitude = pd.to_numeric(df["altitude_ft"], errors="coerce")
+        missing = altitude.isna()
         if altitude.notna().any():
             altitude = altitude.ffill().bfill()
             df["altitude_ft"] = altitude.round().astype("Int64")
+            filled_mask = missing
         else:
             df["altitude_ft"] = pd.Series([0] * len(df), index=df.index, dtype="Int64")
+            filled_mask = pd.Series([True] * len(df), index=df.index)
 
     if "vertical_rate_fpm" in df.columns:
         rates = pd.to_numeric(df["vertical_rate_fpm"], errors="coerce").fillna(0)
         df["vertical_rate_fpm"] = rates.round().astype("Int64")
 
+    return filled_mask
 
-def fill_missing_speed_from_positions(df: pd.DataFrame, time_column: Optional[str]) -> None:
+
+def fill_missing_speed_from_positions(df: pd.DataFrame, time_column: Optional[str]) -> pd.Series:
     """Estimate ``speed_kts`` by deriving segment speed from positions/time."""
+    empty_mask = pd.Series([False] * len(df), index=df.index)
     if "speed_kts" not in df.columns:
-        return
+        return empty_mask
     if not time_column or time_column not in df.columns:
-        return
+        return empty_mask
 
     latitudes = pd.to_numeric(df.get("latitude"), errors="coerce")
     longitudes = pd.to_numeric(df.get("longitude"), errors="coerce")
@@ -309,12 +382,14 @@ def fill_missing_speed_from_positions(df: pd.DataFrame, time_column: Optional[st
     speed_series = pd.to_numeric(df["speed_kts"], errors="coerce")
 
     if latitudes is None or longitudes is None:
-        return
+        return empty_mask
 
     if not speed_series.isna().any():
-        return
+        df["speed_kts"] = speed_series.round().astype("Int64")
+        return empty_mask
 
     computed = speed_series.copy()
+    filled_mask = pd.Series([False] * len(df), index=df.index)
     prev_lat = prev_lon = None
     prev_time: Optional[pd.Timestamp] = None
 
@@ -338,12 +413,14 @@ def fill_missing_speed_from_positions(df: pd.DataFrame, time_column: Optional[st
                     speed_kts = (distance_km / delta_hours) / 1.852
                     if 0 < speed_kts <= MAX_SPEED_FILL_KTS:
                         computed.iloc[idx] = speed_kts
+                        filled_mask.iloc[idx] = True
 
         prev_lat = lat
         prev_lon = lon
         prev_time = time_val
 
     df["speed_kts"] = pd.to_numeric(computed, errors="coerce").round().astype("Int64")
+    return filled_mask
 
 
 def extract_time_info(df: pd.DataFrame, time_column: Optional[str]) -> Dict[str, Any]:
@@ -374,6 +451,23 @@ def parse_time_string(value: Optional[str]) -> Optional[datetime]:
         return datetime.strptime(value, "%d.%m.%Y %H:%M:%S")
     except ValueError:
         return None
+
+
+def mark_computed_rows(
+    df: pd.DataFrame,
+    speed_filled: pd.Series,
+    altitude_filled: pd.Series,
+) -> None:
+    """Update ``value_origin`` to flag synthetic values."""
+    if "value_origin" not in df.columns:
+        df["value_origin"] = pd.Series(["original"] * len(df))
+
+    combined_mask = (
+        speed_filled.reindex(df.index, fill_value=False)
+        | altitude_filled.reindex(df.index, fill_value=False)
+    )
+    existing_rows = df["value_origin"].ne("interpolated")
+    df.loc[existing_rows & combined_mask, "value_origin"] = "computed"
 
 
 def determine_output_directory(airports: Dict[str, Dict[str, Any]], time_info: Dict[str, Any]) -> Path:
@@ -656,6 +750,29 @@ def _is_blank(value: Any) -> bool:
         return math.isnan(value)
     text = str(value).strip()
     return text == "" or text.lower() == "nan"
+
+
+def _interpolate_numeric(start: Any, end: Any, fraction: float) -> Optional[float]:
+    start_val = _to_float(start)
+    end_val = _to_float(end)
+    if start_val is None or end_val is None:
+        return None
+    return start_val + (end_val - start_val) * fraction
+
+
+def _to_float(value: Any) -> Optional[float]:
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        text = str(value).strip()
+        if not text:
+            return None
+        try:
+            return float(text.replace(",", "."))
+        except ValueError:
+            return None
 
 
 def main(csv_path: str | None = None) -> None:
