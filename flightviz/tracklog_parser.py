@@ -220,6 +220,14 @@ def parse_tracklog_table(html: str, url: str) -> Tuple[pd.DataFrame, Dict[str, A
             # inkonsistente Zeile überspringen
             continue
 
+        if values and "approx" in values[-1].lower():
+            # log.info("Skipping tracklog row due to 'Approx' marker: %s", values)
+            continue
+
+        if values and "estimated" in values[-1].lower():
+            # log.info("Skipping tracklog row due to 'Estimated' marker: %s", values)
+            continue
+
         cleaned = values[:]
 
         # Zeit konvertieren
