@@ -47,8 +47,14 @@
 @layer components {
   /* Überschreibt MapLibre-Controls */
   .maplibregl-ctrl.maplibregl-ctrl-group {
-    top: 0rem !important;
-    right: 0rem !important;
+    /* top: 0rem !important;
+    right: 0rem !important; */
+    top: calc(var(--spacing) * 3) !important;
+    right: calc(var(--spacing) * 3) !important;
+  }
+
+  .maplibregl-ctrl-top-right .maplibregl-ctrl {
+    margin: 0 !important;
   }
 }
 

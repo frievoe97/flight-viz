@@ -21,8 +21,12 @@ export default function MapPage() {
     isTrails,
     isSegments,
     isAnalytics,
+    isRoutes,
+    isAirports,
     settingsOpen,
-    setSettingsOpen,
+    layersOpen,
+    toggleSettingsPanel,
+    toggleLayersPanel,
     handleOverlaySelect,
     handleMapLoad,
     handleMapMove,
@@ -37,6 +41,10 @@ export default function MapPage() {
     setTrailLengthSeconds,
     segmentWidthScale,
     setSegmentWidthScale,
+    routeWidthScale,
+    setRouteWidthScale,
+    airportSizeScale,
+    setAirportSizeScale,
     analyticsRadius,
     setAnalyticsRadius,
     selectedFlight,
@@ -98,11 +106,11 @@ export default function MapPage() {
 
         <div
           className="absolute right-3 z-10"
-          style={{ top: projectionMode === 'globe' ? '6rem' : '8rem' }}
+          style={{ top: projectionMode === 'globe' ? '5.3rem' : 'calc(5.3rem + 29px)' }}
         >
           <button
             type="button"
-            className="controls-btn flex items-center gap-2 rounded-full px-2 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow"
+            className="controls-btn flex items-center gap-2 rounded-full px-2 py-2 text-xs font-semibold uppercase tracking-wide text-white [box-shadow:rgba(15,23,42,0.45)_0px_6px_18px]"
             style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)' }}
             onClick={resetView}
           >
@@ -116,14 +124,18 @@ export default function MapPage() {
 
         <div className="absolute bottom-3 right-3 z-10">
           <MapSettings
-            open={settingsOpen}
-            onToggle={() => setSettingsOpen((prev) => !prev)}
+            settingsOpen={settingsOpen}
+            layersOpen={layersOpen}
+            onToggleSettings={toggleSettingsPanel}
+            onToggleLayers={toggleLayersPanel}
             activeOverlay={activeOverlay}
             onOverlaySelect={handleOverlaySelect}
             isFlights={isFlights}
             isTrails={isTrails}
             isSegments={isSegments}
             isAnalytics={isAnalytics}
+            isRoutes={isRoutes}
+            isAirports={isAirports}
             flightSpeedMultiplier={flightSpeedMultiplier}
             onFlightSpeedChange={(value) => setFlightSpeedMultiplier(value)}
             trailSpeedMultiplier={trailSpeedMultiplier}
@@ -132,6 +144,10 @@ export default function MapPage() {
             onTrailLengthChange={(value) => setTrailLengthSeconds(value)}
             segmentWidthScale={segmentWidthScale}
             onSegmentWidthChange={(value) => setSegmentWidthScale(value)}
+            routeWidthScale={routeWidthScale}
+            onRouteWidthChange={(value) => setRouteWidthScale(value)}
+            airportSizeScale={airportSizeScale}
+            onAirportSizeChange={(value) => setAirportSizeScale(value)}
             analyticsRadius={analyticsRadius}
             onAnalyticsRadiusChange={(value) => setAnalyticsRadius(value)}
             analyticsMetric={analyticsMetric}

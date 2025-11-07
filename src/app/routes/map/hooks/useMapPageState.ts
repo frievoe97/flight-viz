@@ -4,11 +4,13 @@ import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { Deck, Layer, PickingInfo } from '@deck.gl/core'
 import * as maplibregl from 'maplibre-gl'
 import type { Map as MaplibreMap, LngLatBoundsLike, PaddingOptions } from 'maplibre-gl'
-import { getFlightData, type Flight, type FlightSegment } from '@/data'
+import { getFlightData, type Flight, type FlightSegment, type AirportMeta } from '@/data'
 import { useSegmentsLayer, findSelectedFlight } from '../overlays/segments'
 import { useAnimatedFlightsOverlay } from '../overlays/animatedFlights'
 import { useTrailsOverlay, type Trip } from '../overlays/trails'
 import { useAnalyticsLayer, type AnalyticsPickingInfo } from '../overlays/analytics'
+import { useRoutesLayer, type RouteArcDatum } from '../overlays/routes'
+import { useAirportHubsLayer, type AirportHubDatum } from '../overlays/airports'
 import type { OverlayId } from '../overlays/options'
 
 type MapWithCamera = MaplibreMap & {
@@ -23,9 +25,32 @@ const SEGMENT_FOCUS_PITCH = 32
 const toRad = (value: number) => (value * Math.PI) / 180
 const toDeg = (value: number) => (value * 180) / Math.PI
 
+type FlightPoint = Flight['points'][number]
+
+function resolveAirportPosition(
+  airport: AirportMeta | null | undefined,
+  point?: FlightPoint | null
+) {
+  const lon = airport?.lon ?? point?.position?.[0]
+  const lat = airport?.lat ?? point?.position?.[1]
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null
+  return [lon as number, lat as number] as [number, number]
+}
+
+function resolveAirportKey(
+  airport: AirportMeta | null | undefined,
+  position: [number, number] | null
+): string | null {
+  if (airport?.iata) return airport.iata
+  if (airport?.icao) return airport.icao
+  if (!position) return null
+  const [lon, lat] = position
+  return `${lon.toFixed(3)},${lat.toFixed(3)}`
+}
+
 const MODE_SUPPORT: Record<'globe' | 'mercator', ReadonlyArray<OverlayId>> = {
-  globe: ['flights', 'trails'],
-  mercator: ['segments', 'analytics', 'flights', 'trails'],
+  globe: ['flights', 'trails', 'airports'],
+  mercator: ['segments', 'analytics', 'flights', 'trails', 'routes', 'airports'],
 } as const
 
 type ProjectionMode = keyof typeof MODE_SUPPORT
@@ -42,9 +67,11 @@ export function useMapPageState() {
   const [trailSpeedMultiplier, setTrailSpeedMultiplier] = useState(2)
   const [trailLengthSeconds, setTrailLengthSeconds] = useState(30)
   const [segmentWidthScale, setSegmentWidthScale] = useState(1)
+  const [routeWidthScale, setRouteWidthScale] = useState(1)
+  const [airportSizeScale, setAirportSizeScale] = useState(1)
   const [analyticsRadius, setAnalyticsRadius] = useState(20000)
   const [projectionMode, setProjectionMode] = useState<ProjectionMode>('globe')
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [activeControlPanel, setActiveControlPanel] = useState<'layers' | 'settings' | null>(null)
   const [pendingOverlay, setPendingOverlay] = useState<OverlayId | null>(null)
   const [mapZoom, setMapZoom] = useState(0)
 
@@ -55,6 +82,7 @@ export function useMapPageState() {
     globe: 'trails',
   })
   const hasFitBoundsRef = useRef(false)
+  const closeControlPanels = useCallback(() => setActiveControlPanel(null), [])
 
   const requestDeckRedraw = useCallback((reason: string) => {
     const overlayWithDeck = deckOverlayRef.current as unknown as {
@@ -67,6 +95,8 @@ export function useMapPageState() {
   const isFlights = activeOverlay === 'flights'
   const isTrails = activeOverlay === 'trails'
   const isAnalytics = activeOverlay === 'analytics'
+  const isRoutes = activeOverlay === 'routes'
+  const isAirports = activeOverlay === 'airports'
 
   useEffect(() => {
     getFlightData().then((d) => {
@@ -242,7 +272,7 @@ export function useMapPageState() {
       if (pendingOverlay !== activeOverlay) {
         setActiveOverlay(pendingOverlay)
       }
-      setSettingsOpen(false)
+      closeControlPanels()
       return
     }
 
@@ -263,7 +293,14 @@ export function useMapPageState() {
     if (pendingOverlay) {
       setPendingOverlay(null)
     }
-  }, [projectionMode, activeOverlay, allowedOverlaySet, allowedOverlays, pendingOverlay])
+  }, [
+    projectionMode,
+    activeOverlay,
+    allowedOverlaySet,
+    allowedOverlays,
+    pendingOverlay,
+    closeControlPanels,
+  ])
 
   useEffect(() => {
     if (!ready) return
@@ -294,30 +331,31 @@ export function useMapPageState() {
 
   const handleOverlaySelect = useCallback(
     (id: OverlayId) => {
-      if (allowedOverlaySet.has(id)) {
+      const activate = () => {
         setPendingOverlay(null)
         setActiveOverlay(id)
-        setSettingsOpen(false)
+        closeControlPanels()
+      }
+
+      if (allowedOverlaySet.has(id)) {
+        activate()
         return
       }
       const supports = overlaySupportMap.get(id) ?? []
       if (!supports.length) {
-        setPendingOverlay(null)
-        setActiveOverlay(id)
-        setSettingsOpen(false)
+        activate()
         return
       }
       const desiredMode = supports.includes(projectionMode) ? projectionMode : supports[0]
       if (desiredMode === projectionMode) {
-        setPendingOverlay(null)
-        setActiveOverlay(id)
-        setSettingsOpen(false)
+        activate()
         return
       }
       setPendingOverlay(id)
+      closeControlPanels()
       switchProjectionMode(desiredMode)
     },
-    [allowedOverlaySet, overlaySupportMap, projectionMode, switchProjectionMode]
+    [allowedOverlaySet, overlaySupportMap, projectionMode, switchProjectionMode, closeControlPanels]
   )
 
   useEffect(() => {
@@ -454,6 +492,115 @@ export function useMapPageState() {
     radius: analyticsRadius,
   })
 
+  const routeArcs = useMemo<RouteArcDatum[]>(() => {
+    if (!data) return []
+    const arcs: RouteArcDatum[] = []
+    for (const flight of data.flights) {
+      if (!flight.points.length) continue
+      const startPoint = flight.points[0]
+      const endPoint = flight.points[flight.points.length - 1]
+      const source = resolveAirportPosition(flight.meta?.departureAirport, startPoint)
+      const target = resolveAirportPosition(flight.meta?.arrivalAirport, endPoint)
+      if (!source || !target) continue
+      arcs.push({
+        id: flight.id,
+        name: flight.name,
+        source,
+        target,
+        avgAltitudeFt: flight.altitudeStats?.avg ?? null,
+        distanceKm: Number.isFinite(flight.distanceKm) ? (flight.distanceKm as number) : 0,
+        originCode:
+          flight.origin ??
+          flight.meta?.departureAirport?.iata ??
+          flight.meta?.departureAirport?.icao ??
+          flight.meta?.departureAirport?.name ??
+          null,
+        destinationCode:
+          flight.destination ??
+          flight.meta?.arrivalAirport?.iata ??
+          flight.meta?.arrivalAirport?.icao ??
+          flight.meta?.arrivalAirport?.name ??
+          null,
+      })
+    }
+    return arcs
+  }, [data])
+
+  const airportHubs = useMemo<AirportHubDatum[]>(() => {
+    if (!data) return []
+    type HubAccumulator = AirportHubDatum & { altitudeSum: number; altitudeCount: number }
+    const hubs = new Map<string, HubAccumulator>()
+    const addAirport = (
+      airport: AirportMeta | null | undefined,
+      point: FlightPoint | undefined,
+      context: { label: string | null; code: string | null; avgAltitudeFt: number | null }
+    ) => {
+      if (!point && !airport) return
+      const position = resolveAirportPosition(airport, point ?? null)
+      if (!position) return
+      const key = resolveAirportKey(airport, position)
+      if (!key) return
+      const altitude = context.avgAltitudeFt
+      const hasAltitude = Number.isFinite(altitude as number)
+      const existing = hubs.get(key)
+      if (existing) {
+        existing.flights += 1
+        if (hasAltitude) {
+          existing.altitudeSum += altitude as number
+          existing.altitudeCount += 1
+        }
+        return
+      }
+      hubs.set(key, {
+        id: key,
+        position,
+        name: airport?.name ?? context.label,
+        code: airport?.iata ?? airport?.icao ?? context.code,
+        city: airport?.city ?? null,
+        country: airport?.country ?? null,
+        flights: 1,
+        avgAltitudeFt: null,
+        altitudeSum: hasAltitude ? ((altitude as number) ?? 0) : 0,
+        altitudeCount: hasAltitude ? 1 : 0,
+      })
+    }
+    data.flights.forEach((flight) => {
+      if (!flight.points.length) return
+      const avgAltitudeFt = flight.altitudeStats?.avg ?? null
+      const departurePoint = flight.points[0]
+      const arrivalPoint = flight.points[flight.points.length - 1]
+      addAirport(flight.meta?.departureAirport, departurePoint, {
+        label: flight.meta?.departureAirport?.name ?? flight.origin,
+        code: flight.origin,
+        avgAltitudeFt,
+      })
+      addAirport(flight.meta?.arrivalAirport, arrivalPoint, {
+        label: flight.meta?.arrivalAirport?.name ?? flight.destination,
+        code: flight.destination,
+        avgAltitudeFt,
+      })
+    })
+    return Array.from(hubs.values())
+      .map(({ altitudeSum, altitudeCount, ...hub }) => ({
+        ...hub,
+        avgAltitudeFt: altitudeCount > 0 ? altitudeSum / altitudeCount : null,
+      }))
+      .sort((a, b) => b.flights - a.flights)
+  }, [data])
+
+  const routesLayer = useRoutesLayer({
+    routes: routeArcs,
+    isActive: isRoutes,
+    widthScale: routeWidthScale,
+  })
+
+  const airportLayer = useAirportHubsLayer({
+    hubs: airportHubs,
+    isActive: isAirports,
+    zoom: mapZoom,
+    sizeScale: airportSizeScale,
+  })
+
   const segmentsLayer = useSegmentsLayer({
     segments: data?.flightSegments ?? [],
     isActive: isSegments,
@@ -469,8 +616,10 @@ export function useMapPageState() {
     if (flightsLayer) out.push(flightsLayer)
     if (trailLayers.length) out.push(...trailLayers)
     if (analyticsLayer) out.push(analyticsLayer)
+    if (routesLayer) out.push(routesLayer)
+    if (airportLayer) out.push(airportLayer)
     return out
-  }, [segmentsLayer, flightsLayer, trailLayers, analyticsLayer])
+  }, [segmentsLayer, flightsLayer, trailLayers, analyticsLayer, routesLayer, airportLayer])
 
   const nf0 = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }), [])
   const nf1 = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }), [])
@@ -517,9 +666,40 @@ export function useMapPageState() {
           ? `Avg altitude: ${nf0.format(Math.round(bin.elevationValue))} ft\nSamples: ${bin.colorValue}`
           : `Count: ${bin.colorValue}`
       }
+      if (isRoutes) {
+        const arc = object as RouteArcDatum
+        const routeLabel =
+          arc.originCode && arc.destinationCode
+            ? `${arc.originCode} → ${arc.destinationCode}`
+            : arc.name
+        const distanceText =
+          Number.isFinite(arc.distanceKm) && arc.distanceKm > 0
+            ? `Distance: ${nf0.format(Math.round(arc.distanceKm))} km`
+            : null
+        const altitudeText =
+          Number.isFinite(arc.avgAltitudeFt as number) && arc.avgAltitudeFt
+            ? `Avg altitude: ${nf0.format(Math.round(arc.avgAltitudeFt))} ft`
+            : null
+        return [routeLabel, arc.name, distanceText, altitudeText].filter(Boolean).join('\n')
+      }
+      if (isAirports) {
+        const hub = object as AirportHubDatum
+        const title = hub.code ?? hub.name ?? 'Airport'
+        const location = hub.city
+          ? hub.country
+            ? `${hub.city}, ${hub.country}`
+            : hub.city
+          : (hub.country ?? null)
+        const flightsText = `Flights: ${nf0.format(hub.flights)}`
+        const altitudeText =
+          Number.isFinite(hub.avgAltitudeFt as number) && hub.avgAltitudeFt
+            ? `Avg cruise: ${nf0.format(Math.round(hub.avgAltitudeFt))} ft`
+            : null
+        return [title, location, flightsText, altitudeText].filter(Boolean).join('\n')
+      }
       return null
     },
-    [isSegments, nf0, isFlights, isTrails, isAnalytics, analyticsMetric]
+    [isSegments, nf0, isFlights, isTrails, isAnalytics, analyticsMetric, isRoutes, isAirports]
   )
 
   const handleHover = useCallback(
@@ -582,6 +762,17 @@ export function useMapPageState() {
     focusAllFlights(projectionMode, { animate: true })
   }, [focusAllFlights, projectionMode])
 
+  const settingsOpen = activeControlPanel === 'settings'
+  const layersOpen = activeControlPanel === 'layers'
+
+  const toggleSettingsPanel = useCallback(() => {
+    setActiveControlPanel((prev) => (prev === 'settings' ? null : 'settings'))
+  }, [])
+
+  const toggleLayersPanel = useCallback(() => {
+    setActiveControlPanel((prev) => (prev === 'layers' ? null : 'layers'))
+  }, [])
+
   return {
     data,
     ready,
@@ -592,8 +783,12 @@ export function useMapPageState() {
     isTrails,
     isSegments,
     isAnalytics,
+    isRoutes,
+    isAirports,
     settingsOpen,
-    setSettingsOpen,
+    layersOpen,
+    toggleSettingsPanel,
+    toggleLayersPanel,
     handleOverlaySelect,
     handleMapLoad,
     handleMapMove,
@@ -608,6 +803,10 @@ export function useMapPageState() {
     setTrailLengthSeconds,
     segmentWidthScale,
     setSegmentWidthScale,
+    routeWidthScale,
+    setRouteWidthScale,
+    airportSizeScale,
+    setAirportSizeScale,
     analyticsRadius,
     setAnalyticsRadius,
     selectedFlight,

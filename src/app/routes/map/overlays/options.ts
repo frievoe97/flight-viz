@@ -1,9 +1,10 @@
 export const overlayOptions = [
-  { id: 'segments', label: 'Flight Segments', description: '3D paths with per-flight stats' },
-  { id: 'flights', label: 'Animated Aircraft', description: 'Interpolated aircraft positions' },
-  { id: 'trails', label: 'Trails', description: 'Altitude trails with fading history' },
-  { id: 'analytics', label: 'Density', description: 'Hexagonal aggregation by altitude or count' },
+  { id: 'segments', label: '3D Tracks', description: 'Segmented flight paths with stats' },
+  { id: 'flights', label: 'Live Flights', description: 'Animated aircraft positions' },
+  { id: 'trails', label: 'Altitude Trails', description: 'Fading height history' },
+  { id: 'analytics', label: 'Hex Heatmap', description: 'Altitude or density analysis' },
+  { id: 'routes', label: 'Route Arcs', description: 'Great-circle links origin -> destination' },
+  { id: 'airports', label: 'Airport Hubs', description: 'Traffic bubbles per airport' },
 ] as const
 
 export type OverlayId = (typeof overlayOptions)[number]['id']
-
