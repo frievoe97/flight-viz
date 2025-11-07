@@ -15,7 +15,7 @@
   "speed_mph_min": 112,
   "speed_mph_max": 519,
   "speed_mph_avg": 453.0,
-  "altitude_ft_min": 0,
+  "altitude_ft_min": 75,
   "altitude_ft_max": 40000,
   "altitude_ft_avg": 31870,
   "vertical_rate_fpm_min": -3125.0,

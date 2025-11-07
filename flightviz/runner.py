@@ -122,6 +122,7 @@ def export_tracklog(
 ) -> None:
     """Write the parsed tracklog CSV, summary JSON and GeoJSON to disk."""
     df = df_main.copy()
+    fill_missing_speed_from_positions(df, metadata.get("time_column"))
     ensure_speed_mph_column(df)
     normalize_altitude_and_rates(df)
     time_info = extract_time_info(df, metadata.get("time_column"))
@@ -272,39 +273,78 @@ def ensure_speed_mph_column(df: pd.DataFrame) -> None:
         df["speed_mph"] = pd.Series([pd.NA] * len(df), dtype="Int64")
         return
 
+    if "speed_kts" in df.columns:
+        speed_kts = pd.to_numeric(df["speed_kts"], errors="coerce")
+        mph_numeric = mph_numeric.fillna(speed_kts * 1.15078)
+
     df["speed_mph"] = pd.to_numeric(mph_numeric, errors="coerce").round().astype("Int64")
 
 
 def normalize_altitude_and_rates(df: pd.DataFrame) -> None:
     """Fill sensible defaults for missing altitude and vertical-rate values."""
     if "altitude_ft" in df.columns:
-        alt_values = [
-            "" if _is_blank(value) else str(value).strip()
-            for value in df["altitude_ft"].tolist()
-        ]
-
-        # Leading blanks -> 0
-        idx = 0
-        while idx < len(alt_values) and _is_blank(alt_values[idx]):
-            alt_values[idx] = "0"
-            idx += 1
-
-        # Trailing blanks -> 0
-        idx = len(alt_values) - 1
-        while idx >= 0 and _is_blank(alt_values[idx]):
-            alt_values[idx] = "0"
-            idx -= 1
-
-        df["altitude_ft"] = pd.Series(alt_values, index=df.index)
+        altitude = pd.to_numeric(df["altitude_ft"], errors="coerce")
+        if altitude.notna().any():
+            altitude = altitude.ffill().bfill()
+            df["altitude_ft"] = altitude.round().astype("Int64")
+        else:
+            df["altitude_ft"] = pd.Series([0] * len(df), index=df.index, dtype="Int64")
 
     if "vertical_rate_fpm" in df.columns:
-        df["vertical_rate_fpm"] = pd.Series(
-            [
-                "0" if _is_blank(value) else str(value).strip()
-                for value in df["vertical_rate_fpm"].tolist()
-            ],
-            index=df.index,
-        )
+        rates = pd.to_numeric(df["vertical_rate_fpm"], errors="coerce").fillna(0)
+        df["vertical_rate_fpm"] = rates.round().astype("Int64")
+
+
+def fill_missing_speed_from_positions(df: pd.DataFrame, time_column: Optional[str]) -> None:
+    """Estimate ``speed_kts`` by deriving segment speed from positions/time."""
+    if "speed_kts" not in df.columns:
+        return
+    if not time_column or time_column not in df.columns:
+        return
+
+    latitudes = pd.to_numeric(df.get("latitude"), errors="coerce")
+    longitudes = pd.to_numeric(df.get("longitude"), errors="coerce")
+    timestamps = pd.to_datetime(df[time_column], format="%d.%m.%Y %H:%M:%S", errors="coerce")
+    speed_series = pd.to_numeric(df["speed_kts"], errors="coerce")
+
+    if latitudes is None or longitudes is None:
+        return
+
+    missing_mask = speed_series.isna()
+    if not missing_mask.any():
+        return
+
+    computed = speed_series.copy()
+    prev_idx: Optional[int] = None
+    prev_lat = prev_lon = None
+    prev_time: Optional[pd.Timestamp] = None
+
+    for idx in range(len(df)):
+        lat = latitudes.iloc[idx]
+        lon = longitudes.iloc[idx]
+        time_val = timestamps.iloc[idx]
+        if pd.isna(lat) or pd.isna(lon) or pd.isna(time_val):
+            continue
+
+        if prev_idx is not None and prev_lat is not None and prev_lon is not None and prev_time is not None:
+            delta_hours = (time_val - prev_time).total_seconds() / 3600.0
+            if delta_hours > 0:
+                distance_km = haversine_km(prev_lat, prev_lon, lat, lon)
+                if distance_km > 0:
+                    speed_kts = (distance_km / delta_hours) / 1.852
+                    if missing_mask.iloc[idx]:
+                        computed.iloc[idx] = speed_kts
+                        missing_mask.iloc[idx] = False
+                    if missing_mask.iloc[prev_idx]:
+                        computed.iloc[prev_idx] = speed_kts
+                        missing_mask.iloc[prev_idx] = False
+
+        prev_idx = idx
+        prev_lat = lat
+        prev_lon = lon
+        prev_time = time_val
+
+    df["speed_kts"] = pd.to_numeric(computed, errors="coerce").round().astype("Int64")
 
 
 def extract_time_info(df: pd.DataFrame, time_column: Optional[str]) -> Dict[str, Any]:
