@@ -32,6 +32,7 @@ AIRCRAFT_CACHE_JSON = AIRCRAFT_CACHE_DIR / "cache.json"
 EXPORT_FLIGHTS_DIR = EXPORT_ROOT / "flights"
 
 EARTH_RADIUS_KM = 6371.0088
+MAX_SPEED_FILL_KTS = 750  # simple sanity cap for derived speeds
 
 TARGETING_PATTERN = re.compile(r"\.setTargeting\('([^']+)',\s*'([^']*)'\)")
 TARGETING_KEYS = {
@@ -310,12 +311,10 @@ def fill_missing_speed_from_positions(df: pd.DataFrame, time_column: Optional[st
     if latitudes is None or longitudes is None:
         return
 
-    missing_mask = speed_series.isna()
-    if not missing_mask.any():
+    if not speed_series.isna().any():
         return
 
     computed = speed_series.copy()
-    prev_idx: Optional[int] = None
     prev_lat = prev_lon = None
     prev_time: Optional[pd.Timestamp] = None
 
@@ -326,20 +325,20 @@ def fill_missing_speed_from_positions(df: pd.DataFrame, time_column: Optional[st
         if pd.isna(lat) or pd.isna(lon) or pd.isna(time_val):
             continue
 
-        if prev_idx is not None and prev_lat is not None and prev_lon is not None and prev_time is not None:
+        if (
+            prev_lat is not None
+            and prev_lon is not None
+            and prev_time is not None
+            and pd.isna(computed.iloc[idx])
+        ):
             delta_hours = (time_val - prev_time).total_seconds() / 3600.0
             if delta_hours > 0:
                 distance_km = haversine_km(prev_lat, prev_lon, lat, lon)
                 if distance_km > 0:
                     speed_kts = (distance_km / delta_hours) / 1.852
-                    if missing_mask.iloc[idx]:
+                    if 0 < speed_kts <= MAX_SPEED_FILL_KTS:
                         computed.iloc[idx] = speed_kts
-                        missing_mask.iloc[idx] = False
-                    if missing_mask.iloc[prev_idx]:
-                        computed.iloc[prev_idx] = speed_kts
-                        missing_mask.iloc[prev_idx] = False
 
-        prev_idx = idx
         prev_lat = lat
         prev_lon = lon
         prev_time = time_val
