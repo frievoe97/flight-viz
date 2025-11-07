@@ -172,8 +172,8 @@ export function MapSettings({
               <input
                 className="w-full accent-[var(--flight-speed)]"
                 type="range"
-                min={0.5}
-                max={3}
+                min={0.1}
+                max={2}
                 step={0.1}
                 value={routeWidthScale}
                 onChange={(event) => onRouteWidthChange(Number(event.target.value))}
