@@ -11,6 +11,8 @@ import { useTrailsOverlay, type Trip } from '../overlays/trails'
 import { useAnalyticsLayer, type AnalyticsPickingInfo } from '../overlays/analytics'
 import { useRoutesLayer, type RouteArcDatum } from '../overlays/routes'
 import { useAirportHubsLayer, type AirportHubDatum } from '../overlays/airports'
+import { useSpeedColumnsLayer, type SpeedColumnDatum } from '../overlays/speedColumns'
+import { useClimbBurstsLayer, type ClimbBurstDatum } from '../overlays/climbBursts'
 import type { OverlayId } from '../overlays/options'
 import {
   createDefaultMapFilters,
@@ -18,6 +20,9 @@ import {
   type MapFilterField,
   type MapFilterValues,
 } from '../types'
+import { nf0, formatKm, formatFt, formatDuration } from '@/lib/format'
+import { resolveAirportPosition, resolveAirportKey, formatAirportLabel, getCountryName } from '../lib/airports'
+import { type NormalizedFilters, normalizeText, parseDateToMs, flightMatchesFilters } from '../lib/filters'
 
 type MapWithCamera = MaplibreMap & {
   cameraForBounds?: (
@@ -33,157 +38,26 @@ const toDeg = (value: number) => (value * 180) / Math.PI
 
 type FlightPoint = Flight['points'][number]
 
-function resolveAirportPosition(
-  airport: AirportMeta | null | undefined,
-  point?: FlightPoint | null
-) {
-  const lon = airport?.lon ?? point?.position?.[0]
-  const lat = airport?.lat ?? point?.position?.[1]
-  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null
-  return [lon as number, lat as number] as [number, number]
-}
-
-function resolveAirportKey(
-  airport: AirportMeta | null | undefined,
-  position: [number, number] | null
-): string | null {
-  if (airport?.iata) return airport.iata
-  if (airport?.icao) return airport.icao
-  if (!position) return null
-  const [lon, lat] = position
-  return `${lon.toFixed(3)},${lat.toFixed(3)}`
-}
-
 const MODE_SUPPORT: Record<'globe' | 'mercator', ReadonlyArray<OverlayId>> = {
-  globe: ['flights', 'trails', 'airports'],
-  mercator: ['segments', 'analytics', 'flights', 'trails', 'routes', 'airports'],
+  globe: ['flights', 'trails', 'airports', 'climb-bursts'],
+  mercator: [
+    'segments',
+    'analytics',
+    'flights',
+    'trails',
+    'routes',
+    'airports',
+    'speed-columns',
+    'climb-bursts',
+  ],
 } as const
 
-type ProjectionMode = keyof typeof MODE_SUPPORT
+export type ProjectionMode = keyof typeof MODE_SUPPORT
 type DeckWithOptionalRedraw = Deck & { setNeedsRedraw?: (reason: string) => void }
 
-type NormalizedFilters = {
-  startDateMs: number | null
-  endDateMs: number | null
-  originAirport: string | null
-  originCountry: string | null
-  destinationAirport: string | null
-  destinationCountry: string | null
-}
+// NormalizedFilters type is imported from ../lib/filters
 
-const normalizeText = (value: string | null | undefined) => {
-  if (!value) return null
-  const normalized = value.trim().toLowerCase()
-  return normalized.length ? normalized : null
-}
-
-const matchesTextFilter = (
-  needle: string | null,
-  candidates: Array<string | null | undefined>
-): boolean => {
-  if (!needle) return true
-  return candidates.some((candidate) => {
-    const normalizedCandidate = normalizeText(candidate)
-    return normalizedCandidate?.includes(needle) ?? false
-  })
-}
-
-const parseDateToMs = (value: string | null | undefined, endOfDay = false): number | null => {
-  if (!value) return null
-  const suffix = endOfDay ? 'T23:59:59Z' : 'T00:00:00Z'
-  const parsed = Date.parse(`${value}${value.includes('T') ? '' : suffix}`)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-const parseUtcToMs = (value: string | null | undefined): number | null => {
-  if (!value) return null
-  const parsed = Date.parse(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-const flightMatchesFilters = (flight: Flight, filters: NormalizedFilters): boolean => {
-  const startTime = parseUtcToMs(flight.meta?.startTimeUtc) ?? parseUtcToMs(flight.meta?.endTimeUtc)
-  if (filters.startDateMs && (startTime == null || startTime < filters.startDateMs)) return false
-  if (filters.endDateMs && (startTime == null || startTime > filters.endDateMs)) return false
-
-  const departureAirport = flight.meta?.departureAirport
-  const arrivalAirport = flight.meta?.arrivalAirport
-  const departureCountryName = getCountryName(departureAirport?.country)
-  const arrivalCountryName = getCountryName(arrivalAirport?.country)
-
-  if (
-    !matchesTextFilter(
-      filters.originAirport,
-      buildAirportTokens(departureAirport, flight.origin)
-    )
-  ) {
-    return false
-  }
-
-  if (
-    !matchesTextFilter(filters.originCountry, [departureAirport?.country, departureCountryName])
-  ) {
-    return false
-  }
-
-  if (
-    !matchesTextFilter(
-      filters.destinationAirport,
-      buildAirportTokens(arrivalAirport, flight.destination)
-    )
-  ) {
-    return false
-  }
-
-  if (
-    !matchesTextFilter(filters.destinationCountry, [arrivalAirport?.country, arrivalCountryName])
-  ) {
-    return false
-  }
-
-  return true
-}
-
-const regionDisplay =
-  typeof Intl !== 'undefined' && 'DisplayNames' in Intl
-    ? new Intl.DisplayNames(['en'], { type: 'region' })
-    : null
-const countryNameCache = new Map<string, string>()
-
-const getCountryName = (code: string | null | undefined): string | null => {
-  if (!code) return null
-  const upper = code.toUpperCase()
-  if (countryNameCache.has(upper)) return countryNameCache.get(upper) as string
-  const resolved = regionDisplay?.of(upper) ?? upper
-  countryNameCache.set(upper, resolved)
-  return resolved
-}
-
-const formatAirportLabel = (airport: AirportMeta | null | undefined, fallback?: string | null) => {
-  const name = airport?.name ?? fallback ?? airport?.iata ?? airport?.icao ?? 'Unknown airport'
-  const codes = [airport?.iata, airport?.icao].filter(Boolean)
-  const codePart = codes.length ? ` (${codes.join('/')})` : ''
-  return `${name}${codePart}`
-}
-
-const buildAirportTokens = (
-  airport: AirportMeta | null | undefined,
-  fallback: string | null | undefined
-) => {
-  const label = formatAirportLabel(airport, fallback)
-  const codes = [airport?.iata, airport?.icao].filter(Boolean).join(' ')
-  return [
-    fallback,
-    airport?.iata,
-    airport?.icao,
-    airport?.name,
-    airport?.city,
-    airport?.country,
-    getCountryName(airport?.country),
-    label,
-    `${label} ${codes}`.trim(),
-  ]
-}
+// helpers moved to ../lib/filters and ../lib/airports
 
 export function useMapPageState() {
   const [activeOverlay, setActiveOverlay] = useState<OverlayId>('trails')
@@ -199,6 +73,8 @@ export function useMapPageState() {
   const [routeWidthScale, setRouteWidthScale] = useState(1)
   const [airportSizeScale, setAirportSizeScale] = useState(1)
   const [analyticsRadius, setAnalyticsRadius] = useState(20000)
+  const [speedColumnScale, setSpeedColumnScale] = useState(60)
+  const [verticalRateThreshold, setVerticalRateThreshold] = useState(1200)
   const [projectionMode, setProjectionMode] = useState<ProjectionMode>('globe')
   const [activeControlPanel, setActiveControlPanel] = useState<'layers' | 'settings' | null>(null)
   const [pendingOverlay, setPendingOverlay] = useState<OverlayId | null>(null)
@@ -303,6 +179,15 @@ export function useMapPageState() {
     })
   }, [])
 
+  const applyMapFilters = useCallback((next: MapFilterValues) => {
+    setMapFilters((prev) => {
+      const keys = Object.keys(prev) as Array<keyof MapFilterValues>
+      const changed = keys.some((key) => prev[key] !== next[key])
+      if (!changed) return prev
+      return { ...next }
+    })
+  }, [])
+
   const resetMapFilters = useCallback(() => {
     setMapFilters(createDefaultMapFilters())
   }, [])
@@ -320,6 +205,8 @@ export function useMapPageState() {
   const isAnalytics = activeOverlay === 'analytics'
   const isRoutes = activeOverlay === 'routes'
   const isAirports = activeOverlay === 'airports'
+  const isSpeedColumns = activeOverlay === 'speed-columns'
+  const isClimbBursts = activeOverlay === 'climb-bursts'
 
   useEffect(() => {
     getFlightData().then((d) => {
@@ -373,17 +260,19 @@ export function useMapPageState() {
       const pitchBase = rawPitch > 0 ? rawPitch : 25
       const targetPitch = mode === 'mercator' ? Math.max(10, Math.min(pitchBase, 45)) : 0
 
-      const duration = animate ? 800 : 0
+      const duration = animate ? 900 : 0
       const easing = animate ? (t: number) => 1 - Math.pow(1 - t, 3) : undefined
 
-      mapInstance.easeTo({
+      mapInstance.flyTo({
         center: targetCenter,
         zoom: targetZoom,
         bearing: targetBearing,
         pitch: targetPitch,
         duration,
+        curve: 1.6,
+        speed: 1.2,
         easing,
-        padding: ZERO_PADDING,
+        essential: true,
       })
 
       setMapZoom(targetZoom)
@@ -457,15 +346,29 @@ export function useMapPageState() {
       const mercatorPitch = data?.INITIAL_VIEW_STATE?.pitch ?? 0
       configureInteractions(mode)
       map.setProjection?.({ type: mode })
+      const currentCenter = map.getCenter?.()
+      const centerArray: [number, number] = currentCenter
+        ? [currentCenter.lng, currentCenter.lat]
+        : [0, 0]
+      const currentZoom = map.getZoom?.() ?? 1
       if (mode === 'globe') {
-        map.setBearing(0)
-        map.setPitch(0)
         map.setMaxPitch(0)
       } else {
-        map.setBearing(mercatorBearing)
-        map.setPitch(mercatorPitch)
         map.setMaxPitch(85)
       }
+      const targetBearing = mode === 'globe' ? 0 : mercatorBearing
+      const targetPitch = mode === 'globe' ? 0 : mercatorPitch
+      map.flyTo({
+        center: centerArray,
+        zoom: currentZoom,
+        bearing: targetBearing,
+        pitch: targetPitch,
+        duration: 900,
+        curve: 1.6,
+        speed: 1.2,
+        easing: (t: number) => 1 - Math.pow(1 - t, 3),
+        essential: true,
+      })
       requestDeckRedraw('projection-change')
     },
     [configureInteractions, data, requestDeckRedraw]
@@ -731,6 +634,72 @@ export function useMapPageState() {
     radius: analyticsRadius,
   })
 
+  const speedColumnSamples = useMemo<SpeedColumnDatum[]>(() => {
+    if (!visibleFlights.length) return []
+    const samples: SpeedColumnDatum[] = []
+    for (const flight of visibleFlights) {
+      const pts = flight.points
+      if (!pts.length) continue
+      const step = Math.max(1, Math.floor(pts.length / 30))
+      for (let i = 0; i < pts.length; i += step) {
+        const point = pts[i]
+        const speed = Number.isFinite(point.speedKts as number) ? (point.speedKts as number) : null
+        if (speed == null) continue
+        samples.push({
+          id: `${flight.id}-${i}`,
+          position: [point.position[0], point.position[1]],
+          speedKts: speed,
+          altitudeFt: Number.isFinite(point.altitudeFeet as number)
+            ? (point.altitudeFeet as number)
+            : null,
+          flightName: flight.name,
+        })
+      }
+    }
+    return samples
+  }, [visibleFlights])
+
+  const speedColumnsLayer = useSpeedColumnsLayer({
+    samples: speedColumnSamples,
+    isActive: isSpeedColumns,
+    elevationScale: speedColumnScale,
+  })
+
+  const climbBurstSamples = useMemo<ClimbBurstDatum[]>(() => {
+    if (!visibleFlights.length) return []
+    const bursts: ClimbBurstDatum[] = []
+    const threshold = Math.max(0, verticalRateThreshold)
+    for (const flight of visibleFlights) {
+      const pts = flight.points
+      if (!pts.length) continue
+      const step = Math.max(1, Math.floor(pts.length / 45))
+      for (let i = 0; i < pts.length; i += step) {
+        const point = pts[i]
+        const rate = Number.isFinite(point.verticalRateFpm as number)
+          ? (point.verticalRateFpm as number)
+          : null
+        if (rate == null || Math.abs(rate) < threshold) continue
+        bursts.push({
+          id: `${flight.id}-${i}`,
+          position: [point.position[0], point.position[1]],
+          verticalRateFpm: rate,
+          altitudeFt: Number.isFinite(point.altitudeFeet as number)
+            ? (point.altitudeFeet as number)
+            : null,
+          speedKts: Number.isFinite(point.speedKts as number) ? (point.speedKts as number) : null,
+          flightName: flight.name,
+        })
+      }
+    }
+    return bursts
+  }, [visibleFlights, verticalRateThreshold])
+
+  const climbBurstsLayer = useClimbBurstsLayer({
+    samples: climbBurstSamples,
+    isActive: isClimbBursts,
+    minMagnitude: verticalRateThreshold,
+  })
+
   const routeArcs = useMemo<RouteArcDatum[]>(() => {
     const arcs: RouteArcDatum[] = []
     for (const flight of visibleFlights) {
@@ -854,30 +823,23 @@ export function useMapPageState() {
     if (flightsLayer) out.push(flightsLayer)
     if (trailLayers.length) out.push(...trailLayers)
     if (analyticsLayer) out.push(analyticsLayer)
+    if (speedColumnsLayer) out.push(speedColumnsLayer)
+    if (climbBurstsLayer) out.push(climbBurstsLayer)
     if (routesLayer) out.push(routesLayer)
     if (airportLayer) out.push(airportLayer)
     return out
-  }, [segmentsLayer, flightsLayer, trailLayers, analyticsLayer, routesLayer, airportLayer])
+  }, [
+    segmentsLayer,
+    flightsLayer,
+    trailLayers,
+    analyticsLayer,
+    speedColumnsLayer,
+    climbBurstsLayer,
+    routesLayer,
+    airportLayer,
+  ])
 
-  const nf0 = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }), [])
-  const nf1 = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }), [])
-
-  const formatKm = useCallback(
-    (v?: number | null, precise = false) =>
-      Number.isFinite(v as number) ? `${(precise ? nf1 : nf0).format(v as number)} km` : '–',
-    [nf0, nf1]
-  )
-  const formatFt = useCallback(
-    (v?: number | null) => (Number.isFinite(v as number) ? `${nf0.format(v as number)} ft` : '–'),
-    [nf0]
-  )
-  const formatDuration = useCallback((seconds?: number | null) => {
-    if (!Number.isFinite(seconds as number)) return '–'
-    const total = Math.floor((seconds as number) / 60)
-    const h = Math.floor(total / 60)
-    const m = total % 60
-    return h > 0 ? `${h} h ${m} min` : `${m} min`
-  }, [])
+  // formatters moved to src/lib/format
 
   const getTooltip = useCallback(
     ({ object }: { object?: unknown | null }) => {
@@ -903,6 +865,15 @@ export function useMapPageState() {
         return analyticsMetric === 'alt'
           ? `Avg altitude: ${nf0.format(Math.round(bin.elevationValue))} ft\nSamples: ${bin.colorValue}`
           : `Count: ${bin.colorValue}`
+      }
+      if (isSpeedColumns) {
+        const column = object as SpeedColumnDatum
+        const speedText = `Speed: ${nf0.format(Math.round(column.speedKts))} kt`
+        const altitudeText =
+          Number.isFinite(column.altitudeFt as number) && column.altitudeFt
+            ? `Altitude: ${nf0.format(Math.round(column.altitudeFt))} ft`
+            : null
+        return [column.flightName, speedText, altitudeText].filter(Boolean).join('\n')
       }
       if (isRoutes) {
         const arc = object as RouteArcDatum
@@ -935,9 +906,34 @@ export function useMapPageState() {
             : null
         return [title, location, flightsText, altitudeText].filter(Boolean).join('\n')
       }
+      if (isClimbBursts) {
+        const burst = object as ClimbBurstDatum
+        const direction = burst.verticalRateFpm >= 0 ? 'Climb' : 'Descent'
+        const rateText = `${direction}: ${nf0.format(Math.abs(Math.round(burst.verticalRateFpm)))} fpm`
+        const altitudeText =
+          Number.isFinite(burst.altitudeFt as number) && burst.altitudeFt
+            ? `Altitude: ${nf0.format(Math.round(burst.altitudeFt))} ft`
+            : null
+        const speedText =
+          Number.isFinite(burst.speedKts as number) && burst.speedKts
+            ? `Speed: ${nf0.format(Math.round(burst.speedKts))} kt`
+            : null
+        return [burst.flightName, rateText, altitudeText, speedText].filter(Boolean).join('\n')
+      }
       return null
     },
-    [isSegments, nf0, isFlights, isTrails, isAnalytics, analyticsMetric, isRoutes, isAirports]
+    [
+      isSegments,
+      nf0,
+      isFlights,
+      isTrails,
+      isAnalytics,
+      analyticsMetric,
+      isSpeedColumns,
+      isRoutes,
+      isAirports,
+      isClimbBursts,
+    ]
   )
 
   const handleHover = useCallback(
@@ -1000,6 +996,64 @@ export function useMapPageState() {
     focusAllFlights(projectionMode, { animate: true })
   }, [focusAllFlights, projectionMode])
 
+  const focusOnLocation = useCallback(
+    (
+      position: [number, number],
+      options?: { zoom?: number; bounds?: [number, number, number, number] }
+    ) => {
+      const mapInstance = mapRef.current?.getMap?.()
+      if (!mapInstance) return
+      const [lon, lat] = position
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) return
+
+      const currentZoom = mapInstance.getZoom()
+      const fallbackZoom = options?.zoom ?? (projectionMode === 'globe' ? 4 : 8.5)
+      let targetZoom = Math.max(currentZoom, fallbackZoom)
+      let targetCenter: [number, number] = [lon, lat]
+
+      if (options?.bounds && Array.isArray(options.bounds)) {
+        const [minLon, minLat, maxLon, maxLat] = options.bounds
+        if (
+          [minLon, minLat, maxLon, maxLat].every(
+            (value) => typeof value === 'number' && Number.isFinite(value)
+          )
+        ) {
+          const padding = { top: 80, right: 80, bottom: 80, left: 80 }
+          const camera = (mapInstance as MapWithCamera).cameraForBounds?.(
+            [
+              [minLon, minLat],
+              [maxLon, maxLat],
+            ],
+            { padding }
+          )
+          if (camera?.center && typeof camera.zoom === 'number' && Number.isFinite(camera.zoom)) {
+            const lngLat = maplibregl.LngLat.convert(camera.center)
+            targetCenter = [lngLat.lng, lngLat.lat]
+            targetZoom = camera.zoom
+          }
+        }
+      }
+
+      const targetPitch =
+        projectionMode === 'mercator' ? Math.max(mapInstance.getPitch(), 35) : 0
+      const targetBearing = projectionMode === 'mercator' ? mapInstance.getBearing() : 0
+
+      mapInstance.flyTo({
+        center: targetCenter,
+        zoom: targetZoom,
+        pitch: targetPitch,
+        bearing: targetBearing,
+        curve: 1.6,
+        speed: 1.2,
+        easing: (t: number) => 1 - Math.pow(1 - t, 3),
+        essential: true,
+      })
+
+      setMapZoom(targetZoom)
+    },
+    [projectionMode]
+  )
+
   const settingsOpen = activeControlPanel === 'settings'
   const layersOpen = activeControlPanel === 'layers'
 
@@ -1023,6 +1077,8 @@ export function useMapPageState() {
     isAnalytics,
     isRoutes,
     isAirports,
+    isSpeedColumns,
+    isClimbBursts,
     settingsOpen,
     layersOpen,
     toggleSettingsPanel,
@@ -1047,6 +1103,10 @@ export function useMapPageState() {
     setAirportSizeScale,
     analyticsRadius,
     setAnalyticsRadius,
+    speedColumnScale,
+    setSpeedColumnScale,
+    verticalRateThreshold,
+    setVerticalRateThreshold,
     selectedFlight,
     chartData,
     clearSelectedFlight: () => setSelectedFlightId(null),
@@ -1054,9 +1114,11 @@ export function useMapPageState() {
     formatFt,
     formatDuration,
     resetView,
+    focusOnLocation,
     closeControlPanels,
     mapFilters,
     updateMapFilter,
+    applyMapFilters,
     resetMapFilters,
     airportSuggestions,
     countrySuggestions,

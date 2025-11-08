@@ -112,15 +112,7 @@ export function truncateRouteLabel(label: string) {
   return label.length > 11 ? `${label.slice(0, 11)}…` : label
 }
 
-export function formatDuration(seconds: number | null) {
-  if (!Number.isFinite(seconds as number)) return '–'
-  const total = Math.round(seconds as number)
-  const hours = Math.floor(total / 3600)
-  const minutes = Math.round((total % 3600) / 60)
-  if (hours === 0 && minutes === 0) return '< 1 min'
-  if (hours === 0) return `${minutes} min`
-  return `${hours} h ${String(minutes).padStart(2, '0')} min`
-}
+export { formatDuration } from '@/lib/format'
 
 export function formatDateTimeLabel(date: Date) {
   const day = String(date.getUTCDate()).padStart(2, '0')
@@ -129,4 +121,43 @@ export function formatDateTimeLabel(date: Date) {
   const hours = String(date.getUTCHours()).padStart(2, '0')
   const minutes = String(date.getUTCMinutes()).padStart(2, '0')
   return `${day}.${month}.${year} ${hours}:${minutes}`
+}
+
+// charts/layout.ts
+let _canvas: HTMLCanvasElement | null = null
+let _ctx: CanvasRenderingContext2D | null = null
+
+function getCtx() {
+  if (_ctx) return _ctx
+  _canvas = document.createElement('canvas')
+  _ctx = _canvas.getContext('2d')
+  return _ctx
+}
+
+export function measureTextWidth(text: string, font?: string) {
+  const ctx = getCtx()
+  if (!ctx) return 120
+  // Theme-Font aus dem DOM ziehen (fallbacks inkl.)
+  const computed =
+    font ?? getComputedStyle(document.documentElement).getPropertyValue('--chart-font')
+  ctx.font = computed || '12px Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+  return Math.ceil(ctx.measureText(text).width)
+}
+
+export function computeYAxisWidth(
+  labels: string[],
+  { min = 80, pad = 24, font }: { min?: number; pad?: number; font?: string } = {}
+) {
+  const w = labels.reduce((m, s) => Math.max(m, measureTextWidth(s, font)), 0)
+  return Math.max(min, w + pad)
+}
+
+/** Einheitliche, „freundliche“ Margins */
+export function smartMargins({
+  top = 12,
+  right = 16,
+  bottom = 24,
+  left = 12,
+}: Partial<{ top: number; right: number; bottom: number; left: number }> = {}) {
+  return { top, right, bottom, left }
 }

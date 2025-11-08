@@ -15,6 +15,8 @@ type MapSettingsProps = {
   isAnalytics: boolean
   isRoutes: boolean
   isAirports: boolean
+  isSpeedColumns: boolean
+  isClimbBursts: boolean
   flightSpeedMultiplier: number
   onFlightSpeedChange: (value: number) => void
   trailSpeedMultiplier: number
@@ -29,6 +31,10 @@ type MapSettingsProps = {
   onAirportSizeChange: (value: number) => void
   analyticsRadius: number
   onAnalyticsRadiusChange: (value: number) => void
+  speedColumnScale: number
+  onSpeedColumnScaleChange: (value: number) => void
+  verticalRateThreshold: number
+  onVerticalRateThresholdChange: (value: number) => void
   analyticsMetric: 'alt' | 'count'
   onAnalyticsMetricToggle: () => void
 }
@@ -49,6 +55,8 @@ export function MapSettings({
   isAnalytics,
   isRoutes,
   isAirports,
+  isSpeedColumns,
+  isClimbBursts,
   flightSpeedMultiplier,
   onFlightSpeedChange,
   trailSpeedMultiplier,
@@ -63,6 +71,10 @@ export function MapSettings({
   onAirportSizeChange,
   analyticsRadius,
   onAnalyticsRadiusChange,
+  speedColumnScale,
+  onSpeedColumnScaleChange,
+  verticalRateThreshold,
+  onVerticalRateThresholdChange,
   analyticsMetric,
   onAnalyticsMetricToggle,
 }: MapSettingsProps) {
@@ -197,6 +209,46 @@ export function MapSettings({
                 step={0.1}
                 value={airportSizeScale}
                 onChange={(event) => onAirportSizeChange(Number(event.target.value))}
+              />
+            </div>
+          ) : null}
+
+          {isSpeedColumns ? (
+            <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
+                  Column height
+                </span>
+                <span>{speedColumnScale.toFixed(0)}×</span>
+              </div>
+              <input
+                className="w-full accent-[var(--flight-speed)]"
+                type="range"
+                min={15}
+                max={120}
+                step={5}
+                value={speedColumnScale}
+                onChange={(event) => onSpeedColumnScaleChange(Number(event.target.value))}
+              />
+            </div>
+          ) : null}
+
+          {isClimbBursts ? (
+            <div className={controlCardClass} style={{ borderColor: 'var(--panel-border)' }}>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
+                  Min climb/sink
+                </span>
+                <span>{Math.round(verticalRateThreshold).toLocaleString()} fpm</span>
+              </div>
+              <input
+                className="w-full accent-[var(--flight-speed)]"
+                type="range"
+                min={500}
+                max={2500}
+                step={100}
+                value={verticalRateThreshold}
+                onChange={(event) => onVerticalRateThresholdChange(Number(event.target.value))}
               />
             </div>
           ) : null}

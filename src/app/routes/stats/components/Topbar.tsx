@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { FilterPopover } from './Filters'
+import { FilterPopover, FlightFilterSelect } from './Filters'
 import type { StatsPageView, FilterOption } from '../hooks/useStatsPageState'
-import { Map as MapIcon, LineChart, Plane, FilterX, Search as SearchIcon } from 'lucide-react'
+import { Map as MapIcon, LineChart, Plane, FilterX } from 'lucide-react'
 
 type FilterGroups = {
   dates: FilterOption[]
@@ -16,8 +16,6 @@ type FilterGroups = {
 type TopbarProps = {
   activeView: StatsPageView
   onActiveViewChange: (view: StatsPageView) => void
-  searchTerm: string
-  onSearchChange: (value: string) => void
   filteredCount: number
   totalCount: number
   filterDate: string
@@ -33,13 +31,15 @@ type TopbarProps = {
   filterOptions: FilterGroups
   onResetFilters: () => void
   className?: string
+  flightPickerOptions?: Array<{ id: string; label: string }>
+  selectedFlightId?: string | null
+  selectedFlightLabel?: string
+  onSelectFlight?: (id: string) => void
 }
 
 export default function Topbar({
   activeView,
   onActiveViewChange,
-  searchTerm,
-  onSearchChange,
   filteredCount,
   totalCount,
   filterDate,
@@ -55,10 +55,16 @@ export default function Topbar({
   filterOptions,
   onResetFilters,
   className,
+  flightPickerOptions = [],
+  selectedFlightId = null,
+  selectedFlightLabel = 'Select flight',
+  onSelectFlight,
 }: TopbarProps) {
   const counterText = useMemo(() => {
     return `Showing ${filteredCount.toLocaleString('en-US')} of ${totalCount.toLocaleString('en-US')} flights`
   }, [filteredCount, totalCount])
+  const showFilters = activeView === 'flight'
+  const canSelectFlight = showFilters && !!onSelectFlight
 
   return (
     <div
@@ -76,7 +82,7 @@ export default function Topbar({
             title="Back to map"
           >
             <MapIcon className="h-4 w-4" aria-hidden />
-            <span className="hidden sm:inline">Back to map</span>
+            {/* <span className="hidden sm:inline">Back to map</span> */}
           </Link>
           <SegmentedControl
             value={activeView}
@@ -86,70 +92,85 @@ export default function Topbar({
               { value: 'flight', label: 'Single flight', icon: <Plane className="h-4 w-4" /> },
             ]}
           />
-          <div className="hidden md:block text-xs text-white/60">{counterText}</div>
+          {showFilters ? (
+            <div className="hidden md:block text-xs text-white/60">{counterText}</div>
+          ) : null}
         </div>
 
-        <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center md:justify-end">
-          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.65)] px-3 py-2 text-sm">
-            <SearchIcon className="h-4 w-4 text-white/60" aria-hidden />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Name, identifier, airport…"
-              className="min-w-0 flex-1 bg-transparent text-white placeholder:text-white/40 focus:outline-none"
+        {showFilters ? (
+          <div className="flex flex-1 justify-end">
+            <button
+              type="button"
+              onClick={onResetFilters}
+              className="controls-btn inline-flex items-center gap-2 rounded-md border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.65)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white hover:bg-white/10"
+            >
+              <FilterX className="h-4 w-4" aria-hidden />
+              <span>Reset filters</span>
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {showFilters ? (
+        <>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {canSelectFlight ? (
+              <FlightFilterSelect
+                label="Flight"
+                options={flightPickerOptions}
+                selectedId={selectedFlightId}
+                selectedLabel={selectedFlightLabel}
+                onSelect={onSelectFlight}
+              />
+            ) : (
+              <FlightFilterSelect
+                label="Flight"
+                options={[]}
+                selectedId={null}
+                selectedLabel="No flights available"
+                onSelect={() => undefined}
+              />
+            )}
+            <FilterPopover
+              label="Date"
+              value={filterDate}
+              options={filterOptions.dates}
+              onChange={onFilterDateChange}
             />
-          </label>
-          <button
-            type="button"
-            onClick={onResetFilters}
-            className="controls-btn inline-flex items-center gap-2 rounded-md border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.65)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white hover:bg-white/10"
-          >
-            <FilterX className="h-4 w-4" aria-hidden />
-            <span>Reset filters</span>
-          </button>
-        </div>
-      </div>
+            <FilterPopover
+              label="Origin airport"
+              value={filterOrigin}
+              options={filterOptions.origins}
+              onChange={onFilterOriginChange}
+            />
+            <FilterPopover
+              label="Destination airport"
+              value={filterDestination}
+              options={filterOptions.destinations}
+              onChange={onFilterDestinationChange}
+            />
+            <FilterPopover
+              label="Origin country"
+              value={filterOriginCountry}
+              options={filterOptions.originCountries}
+              onChange={onFilterOriginCountryChange}
+            />
+            <FilterPopover
+              label="Destination country"
+              value={filterDestinationCountry}
+              options={filterOptions.destinationCountries}
+              onChange={onFilterDestinationCountryChange}
+            />
+          </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
-        <FilterPopover
-          label="Date"
-          value={filterDate}
-          options={filterOptions.dates}
-          onChange={onFilterDateChange}
-        />
-        <FilterPopover
-          label="Origin airport"
-          value={filterOrigin}
-          options={filterOptions.origins}
-          onChange={onFilterOriginChange}
-        />
-        <FilterPopover
-          label="Destination airport"
-          value={filterDestination}
-          options={filterOptions.destinations}
-          onChange={onFilterDestinationChange}
-        />
-        <FilterPopover
-          label="Origin country"
-          value={filterOriginCountry}
-          options={filterOptions.originCountries}
-          onChange={onFilterOriginCountryChange}
-        />
-        <FilterPopover
-          label="Destination country"
-          value={filterDestinationCountry}
-          options={filterOptions.destinationCountries}
-          onChange={onFilterDestinationCountryChange}
-        />
-      </div>
-
-      <div className="mt-2 md:hidden text-[0.7rem] text-white/60">{counterText}</div>
+          <div className="mt-2 md:hidden text-[0.7rem] text-white/60">{counterText}</div>
+        </>
+      ) : null}
     </div>
   )
 }
 
-function SegmentedControl<T extends string>({
+export function SegmentedControl<T extends string>({
   value,
   onChange,
   options,

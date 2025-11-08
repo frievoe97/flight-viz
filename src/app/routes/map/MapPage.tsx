@@ -1,23 +1,28 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import MapGL, { NavigationControl } from 'react-map-gl/maplibre'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import MapGL, { Marker, NavigationControl } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import * as maplibregl from 'maplibre-gl'
 import { useNavigate } from 'react-router-dom'
 import { MAP_STYLE } from '@/lib/map/deckConfig'
 import MapSettings from './components/MapSettings'
 import ProjectionToggle from './components/ProjectionToggle'
+import LocationSearch, { type LocationSearchHandle } from './components/LocationSearch'
 import StatsShortcut from './components/StatsShortcut'
 import FlightDetailsPanel from './components/FlightDetailsPanel'
 import FilterMenu from './components/FilterMenu'
 import { useMapPageState, MAP_PADDING } from './hooks/useMapPageState'
-import type { MapFilterField } from './types'
+import { createDefaultMapFilters, type MapFilterField, type MapFilterValues } from './types'
 import { Filter, RotateCcw } from 'lucide-react'
 
 export default function MapPage() {
   const navigate = useNavigate()
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [searchHighlight, setSearchHighlight] = useState<{ position: [number, number] } | null>(
+    null
+  )
   const controlPanelRef = useRef<HTMLDivElement | null>(null)
   const filterPanelRef = useRef<HTMLDivElement | null>(null)
+  const locationSearchRef = useRef<LocationSearchHandle | null>(null)
   const {
     data,
     mapRef,
@@ -29,6 +34,8 @@ export default function MapPage() {
     isAnalytics,
     isRoutes,
     isAirports,
+    isSpeedColumns,
+    isClimbBursts,
     settingsOpen,
     layersOpen,
     toggleSettingsPanel,
@@ -53,6 +60,10 @@ export default function MapPage() {
     setAirportSizeScale,
     analyticsRadius,
     setAnalyticsRadius,
+    speedColumnScale,
+    setSpeedColumnScale,
+    verticalRateThreshold,
+    setVerticalRateThreshold,
     selectedFlight,
     chartData,
     clearSelectedFlight,
@@ -60,25 +71,150 @@ export default function MapPage() {
     formatFt,
     formatDuration,
     resetView,
+    focusOnLocation,
     closeControlPanels,
     mapFilters,
-    updateMapFilter,
+    applyMapFilters,
     resetMapFilters,
     airportSuggestions,
     countrySuggestions,
     hasActiveFilters,
   } = useMapPageState()
 
-  const handleFilterChange = useCallback(
-    (field: MapFilterField, value: string) => {
-      updateMapFilter(field, value)
-    },
-    [updateMapFilter]
-  )
+  const [pendingFilters, setPendingFilters] = useState<MapFilterValues>(mapFilters)
+
+  useEffect(() => {
+    setPendingFilters(mapFilters)
+  }, [mapFilters])
+
+  const handlePendingFilterChange = useCallback((field: MapFilterField, value: string) => {
+    setPendingFilters((prev) => {
+      if (prev[field] === value) return prev
+      return { ...prev, [field]: value }
+    })
+  }, [])
+
+  const shouldResetAfterFilterChangeRef = useRef(false)
+
+  const handleFilterApply = useCallback(() => {
+    applyMapFilters(pendingFilters)
+    shouldResetAfterFilterChangeRef.current = true
+    setFiltersOpen(false)
+  }, [applyMapFilters, pendingFilters])
 
   const handleFilterReset = useCallback(() => {
+    const defaults = createDefaultMapFilters()
+    const isAlreadyDefault = (Object.keys(defaults) as MapFilterField[]).every(
+      (field) => mapFilters[field] === defaults[field]
+    )
     resetMapFilters()
-  }, [resetMapFilters])
+    setPendingFilters(defaults)
+    setFiltersOpen(false)
+    if (isAlreadyDefault) {
+      resetView()
+    } else {
+      shouldResetAfterFilterChangeRef.current = true
+    }
+  }, [mapFilters, resetMapFilters, resetView])
+
+  const hasPendingChanges = useMemo(() => {
+    return (Object.keys(mapFilters) as MapFilterField[]).some(
+      (field) => mapFilters[field] !== pendingFilters[field]
+    )
+  }, [mapFilters, pendingFilters])
+
+  const handleLocationSelect = useCallback(
+    ({
+      position,
+      zoom,
+      bounds,
+    }: {
+      position: [number, number]
+      zoom?: number
+      bounds?: [number, number, number, number]
+    }) => {
+      focusOnLocation(position, { zoom, bounds })
+      setSearchHighlight({ position })
+    },
+    [focusOnLocation]
+  )
+
+  useEffect(() => {
+    if (shouldResetAfterFilterChangeRef.current) {
+      shouldResetAfterFilterChangeRef.current = false
+      resetView()
+    }
+  }, [mapFilters, resetView])
+
+  useEffect(() => {
+    if (!searchHighlight) return
+    const timeout = window.setTimeout(() => setSearchHighlight(null), 5000)
+    return () => window.clearTimeout(timeout)
+  }, [searchHighlight])
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return
+      if (event.metaKey || event.ctrlKey || event.altKey) return
+      const key = event.key.toLowerCase()
+      const target = event.target as HTMLElement | null
+      const isEditable =
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      if (isEditable && key !== 'escape') {
+        return
+      }
+      switch (key) {
+        case 's': {
+          event.preventDefault()
+          locationSearchRef.current?.open()
+          break
+        }
+        case 'p': {
+          event.preventDefault()
+          toggleProjection()
+          break
+        }
+        case 'f': {
+          event.preventDefault()
+          setFiltersOpen((prev) => !prev)
+          break
+        }
+        case 'r': {
+          event.preventDefault()
+          resetView()
+          break
+        }
+        case 'escape': {
+          let handled = false
+          if (filtersOpen) {
+            setFiltersOpen(false)
+            handled = true
+          }
+          if (settingsOpen || layersOpen) {
+            closeControlPanels()
+            handled = true
+          }
+          if (locationSearchRef.current?.isOpen?.()) {
+            locationSearchRef.current.close()
+            handled = true
+          }
+          if (handled) event.preventDefault()
+          break
+        }
+      }
+    }
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [
+    toggleProjection,
+    resetView,
+    setFiltersOpen,
+    filtersOpen,
+    settingsOpen,
+    layersOpen,
+    closeControlPanels,
+  ])
 
   useEffect(() => {
     if (!settingsOpen && !layersOpen && !filtersOpen) return
@@ -145,10 +281,24 @@ export default function MapPage() {
             showZoom
             visualizePitch={projectionMode !== 'globe'}
           />
+          {searchHighlight ? (
+            <Marker
+              longitude={searchHighlight.position[0]}
+              latitude={searchHighlight.position[1]}
+              anchor="center"
+            >
+              <span className="relative block h-10 w-10" style={{ pointerEvents: 'none' }}>
+                <span className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/60 opacity-75 animate-ping" />
+                <span className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/80 bg-white/30 blur-[1px]" />
+                <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--flight-speed)] shadow-[0_0_12px_rgba(59,130,246,0.9)]" />
+              </span>
+            </Marker>
+          ) : null}
         </MapGL>
 
-        <div className="absolute top-3 left-3 z-10">
+        <div className="absolute top-3 left-3 z-10 flex items-start gap-2">
           <ProjectionToggle projectionMode={projectionMode} onToggle={toggleProjection} />
+          <LocationSearch ref={locationSearchRef} onSelect={handleLocationSelect} />
         </div>
 
         <div
@@ -171,11 +321,13 @@ export default function MapPage() {
         >
           {filtersOpen ? (
             <FilterMenu
-              values={mapFilters}
+              values={pendingFilters}
               airportSuggestions={airportSuggestions}
               countrySuggestions={countrySuggestions}
-              onFieldChange={handleFilterChange}
+              onFieldChange={handlePendingFilterChange}
               onReset={handleFilterReset}
+              onApply={handleFilterApply}
+              applyDisabled={!hasPendingChanges}
             />
           ) : null}
 
@@ -213,6 +365,8 @@ export default function MapPage() {
             isAnalytics={isAnalytics}
             isRoutes={isRoutes}
             isAirports={isAirports}
+            isSpeedColumns={isSpeedColumns}
+            isClimbBursts={isClimbBursts}
             flightSpeedMultiplier={flightSpeedMultiplier}
             onFlightSpeedChange={(value) => setFlightSpeedMultiplier(value)}
             trailSpeedMultiplier={trailSpeedMultiplier}
@@ -227,6 +381,10 @@ export default function MapPage() {
             onAirportSizeChange={(value) => setAirportSizeScale(value)}
             analyticsRadius={analyticsRadius}
             onAnalyticsRadiusChange={(value) => setAnalyticsRadius(value)}
+            speedColumnScale={speedColumnScale}
+            onSpeedColumnScaleChange={(value) => setSpeedColumnScale(value)}
+            verticalRateThreshold={verticalRateThreshold}
+            onVerticalRateThresholdChange={(value) => setVerticalRateThreshold(value)}
             analyticsMetric={analyticsMetric}
             onAnalyticsMetricToggle={toggleAnalyticsMetric}
           />

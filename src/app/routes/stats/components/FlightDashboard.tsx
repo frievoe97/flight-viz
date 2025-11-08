@@ -1,5 +1,4 @@
-import { useMemo, type Dispatch, type SetStateAction } from 'react'
-import * as Popover from '@radix-ui/react-popover'
+import { useMemo } from 'react'
 import {
   Area,
   AreaChart,
@@ -12,12 +11,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { cn } from '@/lib/utils'
 import { formatDuration } from '../lib/utils'
 import { ChartCard, DetailCard } from './Cards'
 import type { SelectedFlightStats } from '../hooks/useStatsPageState'
-
-type FlightPickerOption = { id: string; label: string }
 
 type SeriesPoint = {
   distance: number
@@ -32,10 +28,6 @@ type HistogramEntry = { label: string; samples: number }
 type FlightDashboardProps = {
   nf0: Intl.NumberFormat
   flightAnimationKey: number
-  selectedFlightId: string | null
-  setSelectedFlightId: Dispatch<SetStateAction<string | null>>
-  selectedFlightDisplay: string
-  flightPickerOptions: FlightPickerOption[]
   selectedFlightStats: SelectedFlightStats | null
   selectedFlightAltitudeSeries: SeriesPoint[]
   selectedFlightSpeedSeries: SeriesPoint[]
@@ -70,10 +62,6 @@ const LINE_CURSOR_ALTITUDE = {
 export function FlightDashboard({
   nf0,
   flightAnimationKey,
-  selectedFlightId,
-  setSelectedFlightId,
-  selectedFlightDisplay,
-  flightPickerOptions,
   selectedFlightStats,
   selectedFlightAltitudeSeries,
   selectedFlightSpeedSeries,
@@ -88,64 +76,6 @@ export function FlightDashboard({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
-      <section className="rounded-xl border border-[color:var(--panel-border)] bg-[rgba(12,20,36,0.78)] p-3 text-white shadow-sm backdrop-blur">
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-[0.55rem] uppercase tracking-[0.3em] text-white/60">
-              Flugauswahl
-            </div>
-            <h2 className="text-base font-semibold text-white/90">{selectedFlightDisplay}</h2>
-          </div>
-          <Popover.Root>
-            <Popover.Trigger asChild>
-              <button
-                type="button"
-                disabled={!flightPickerOptions.length}
-                className={cn(
-                  'controls-btn flex items-center justify-between rounded-md border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.72)] px-3 py-1.5 text-xs font-medium text-white shadow transition focus:outline-none focus:ring-2 focus:ring-[rgba(56,189,248,0.45)]',
-                  !flightPickerOptions.length && 'cursor-not-allowed opacity-50'
-                )}
-              >
-                <span className="truncate">{selectedFlightDisplay}</span>
-                <span aria-hidden className="ml-2 text-[0.65rem] text-white/60">▼</span>
-              </button>
-            </Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Content
-                side="bottom"
-                align="end"
-                sideOffset={8}
-                className="w-72 rounded-lg border border-[color:var(--panel-border)] bg-[#0f172a]/95 shadow-lg backdrop-blur-md"
-              >
-                <div className="max-h-80 overflow-y-auto p-2 text-sm text-white">
-                  {flightPickerOptions.length ? (
-                    flightPickerOptions.map((option) => (
-                      <Popover.Close asChild key={option.id}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedFlightId(option.id)}
-                          className={cn(
-                            'flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition hover:bg-white/10',
-                            selectedFlightId === option.id && 'bg-white/10'
-                          )}
-                        >
-                          <span className="truncate">{option.label}</span>
-                        </button>
-                      </Popover.Close>
-                    ))
-                  ) : (
-                    <div className="px-3 py-2 text-xs text-white/50">No flights available</div>
-                  )}
-                </div>
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
-        </header>
-        <p className="mt-2 text-[0.7rem] text-white/60">
-          Select a flight within the filtered data to view telemetry charts and metrics.
-        </p>
-      </section>
-
       <div className="flex-1 min-h-0 overflow-y-auto pb-6 pr-1">
         <div
           key={flightAnimationKey}
@@ -169,7 +99,9 @@ export function FlightDashboard({
                     {selectedFlightStats.originCountry} → {selectedFlightStats.destinationCountry}
                   </div>
                   {selectedFlightStats.departureLabel ? (
-                    <div className="text-xs text-white/50">{selectedFlightStats.departureLabel}</div>
+                    <div className="text-xs text-white/50">
+                      {selectedFlightStats.departureLabel}
+                    </div>
                   ) : null}
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -337,7 +269,10 @@ export function FlightDashboard({
                 />
                 <Tooltip
                   cursor={LINE_CURSOR_ALTITUDE}
-                  formatter={(value: number) => [`${Math.round(value)} ft/min`, 'Vertikalgeschwindigkeit']}
+                  formatter={(value: number) => [
+                    `${Math.round(value)} ft/min`,
+                    'Vertikalgeschwindigkeit',
+                  ]}
                   contentStyle={tooltipStyle}
                   labelStyle={tooltipLabelStyle}
                   labelFormatter={(value: number) => `${Math.round(value)} min`}
@@ -369,7 +304,11 @@ export function FlightDashboard({
                 margin={{ left: -18, right: 12, top: 12, bottom: 12 }}
               >
                 <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
-                <XAxis dataKey="label" tick={{ fill: 'var(--chart-axis)', fontSize: 11 }} interval={0} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: 'var(--chart-axis)', fontSize: 11 }}
+                  interval={0}
+                />
                 <YAxis tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} allowDecimals={false} />
                 <Tooltip
                   cursor={BAR_CURSOR}
@@ -396,7 +335,11 @@ export function FlightDashboard({
                 margin={{ left: -18, right: 12, top: 12, bottom: 12 }}
               >
                 <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
-                <XAxis dataKey="label" tick={{ fill: 'var(--chart-axis)', fontSize: 11 }} interval={0} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: 'var(--chart-axis)', fontSize: 11 }}
+                  interval={0}
+                />
                 <YAxis tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} allowDecimals={false} />
                 <Tooltip
                   cursor={BAR_CURSOR}
