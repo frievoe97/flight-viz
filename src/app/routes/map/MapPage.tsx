@@ -265,22 +265,22 @@ export default function MapPage() {
     if (typeof nativeMap.setSky !== 'function') return
 
     const isGlobe = projectionMode === 'globe'
-    const spaceColor = theme === 'light' ? '#0f172a' : '#01030b'
-    const haloColor = theme === 'light' ? '#bae6fd' : '#1f2937'
-    const atmosphereColor = theme === 'light' ? '#bfdbfe' : '#0b1f3a'
+    // const spaceColor = theme === 'light' ? '#0f172a' : '#01030b'
+    // const haloColor = theme === 'light' ? '#bae6fd' : '#1f2937'
+    // const atmosphereColor = theme === 'light' ? '#bfdbfe' : '#0b1f3a'
 
-    nativeMap.setSky({
-      type: 'sky',
-      paint: {
-        'sky-type': 'atmosphere',
-        'sky-atmosphere-color': atmosphereColor,
-        'sky-atmosphere-halo-color': haloColor,
-        'sky-atmosphere-sun': [1.5, 90],
-        'sky-atmosphere-sun-intensity': isGlobe ? 12 : 0,
-        'sky-color': spaceColor,
-        'sky-opacity': isGlobe ? 1 : 0,
-      },
-    } as maplibregl.SkyLayerSpecification)
+    // nativeMap.setSky({
+    //   type: 'sky',
+    //   paint: {
+    //     'sky-type': 'atmosphere',
+    //     'sky-atmosphere-color': atmosphereColor,
+    //     'sky-atmosphere-halo-color': haloColor,
+    //     'sky-atmosphere-sun': [1.5, 90],
+    //     'sky-atmosphere-sun-intensity': isGlobe ? 12 : 0,
+    //     'sky-color': spaceColor,
+    //     'sky-opacity': isGlobe ? 1 : 0,
+    //   },
+    // } as maplibregl.SkyLayerSpecification)
 
     if (typeof nativeMap.setLight === 'function') {
       nativeMap.setLight({
@@ -364,7 +364,11 @@ export default function MapPage() {
           <button
             type="button"
             className="controls-btn flex items-center gap-2 rounded-full px-2 py-2 text-xs font-semibold uppercase tracking-wide"
-            style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)', boxShadow: 'var(--controls-shadow)' }}
+            style={{
+              backgroundColor: 'var(--panel-bg)',
+              borderColor: 'var(--panel-border)',
+              boxShadow: 'var(--controls-shadow)',
+            }}
             onClick={resetView}
           >
             <RotateCcw className="h-4 w-4" aria-hidden />
@@ -391,13 +395,17 @@ export default function MapPage() {
             <StatsShortcut onClick={() => navigate('/stats')} />
             <button
               type="button"
-            className="controls-btn rounded-full p-2"
-            style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)', boxShadow: 'var(--controls-shadow)' }}
-            onClick={() => setFiltersOpen((prev) => !prev)}
-            aria-expanded={filtersOpen}
-            aria-label={filtersOpen ? 'Hide filters' : 'Show filters'}
-            title="Filters"
-          >
+              className="controls-btn rounded-full p-2"
+              style={{
+                backgroundColor: 'var(--panel-bg)',
+                borderColor: 'var(--panel-border)',
+                boxShadow: 'var(--controls-shadow)',
+              }}
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              aria-expanded={filtersOpen}
+              aria-label={filtersOpen ? 'Hide filters' : 'Show filters'}
+              title="Filters"
+            >
               <Filter
                 className="h-5 w-5"
                 aria-hidden
