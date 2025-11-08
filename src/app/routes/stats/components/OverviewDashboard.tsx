@@ -80,8 +80,8 @@ export function OverviewDashboard({
   return (
     <div className="grid flex-1 min-h-0 gap-6 auto-rows-[minmax(260px,1fr)] grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 pb-4">
       <ChartCard
-        title="Flüge pro Tag"
-        subtitle="Tägliche Missionsanzahl über alle Flüge"
+        title="Flights per day"
+        subtitle="Daily mission count across all flights"
         className="min-h-[280px]"
       >
         <BarChart data={flightsPerDay} margin={{ left: -18, right: 12, top: 12, bottom: 12 }}>
@@ -90,7 +90,7 @@ export function OverviewDashboard({
           <YAxis tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} allowDecimals={false} />
           <Tooltip
             cursor={BAR_CURSOR}
-            formatter={(value: number) => [`${value}`, 'Flüge']}
+            formatter={(value: number) => [`${value}`, 'Flights']}
             contentStyle={tooltipStyle}
             labelStyle={tooltipLabelStyle}
           />
@@ -98,7 +98,7 @@ export function OverviewDashboard({
         </BarChart>
       </ChartCard>
 
-      <ChartCard title="Flüge pro Stunde" subtitle="Startzeit (UTC)" className="min-h-[280px]">
+      <ChartCard title="Flights per hour" subtitle="Departure time (UTC)" className="min-h-[280px]">
         <BarChart data={flightsByHour} margin={{ left: -18, right: 12, top: 12, bottom: 12 }}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis dataKey="label" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} interval={0} />
@@ -109,8 +109,8 @@ export function OverviewDashboard({
       </ChartCard>
 
       <ChartCard
-        title="Fluglängen‑Verteilung"
-        subtitle="Histogramm der aufgezeichneten Streckenlängen"
+        title="Flight length distribution"
+        subtitle="Histogram of recorded route lengths"
         className="min-h-[280px]"
       >
         <BarChart
@@ -122,7 +122,7 @@ export function OverviewDashboard({
           <YAxis tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} allowDecimals={false} />
           <Tooltip
             cursor={BAR_CURSOR}
-            formatter={(value: number) => [`${value}`, 'Flüge']}
+            formatter={(value: number) => [`${value}`, 'Flights']}
             contentStyle={tooltipStyle}
             labelStyle={tooltipLabelStyle}
           />
@@ -131,8 +131,8 @@ export function OverviewDashboard({
       </ChartCard>
 
       <ChartCard
-        title="Ø Geschwindigkeit"
-        subtitle="Täglicher Durchschnitt (km/h)"
+        title="Avg. speed"
+        subtitle="Daily average (km/h)"
         className="min-h-[280px]"
       >
         <LineChart data={speedByDay} margin={{ left: -12, right: 12, top: 12, bottom: 12 }}>
@@ -144,7 +144,7 @@ export function OverviewDashboard({
           />
           <Tooltip
             cursor={LINE_CURSOR_SPEED}
-            formatter={(value: number) => [`${Math.round(value)} km/h`, 'Ø Geschwindigkeit']}
+            formatter={(value: number) => [`${Math.round(value)} km/h`, 'Avg. speed']}
             contentStyle={tooltipStyle}
             labelStyle={tooltipLabelStyle}
           />
@@ -159,8 +159,8 @@ export function OverviewDashboard({
       </ChartCard>
 
       <ChartCard
-        title="Top 10 längste Flüge"
-        subtitle="Distanz in Kilometern"
+        title="Top 10 longest flights"
+        subtitle="Distance in kilometers"
         className="min-h-[280px]"
       >
         <BarChart
@@ -182,7 +182,7 @@ export function OverviewDashboard({
           />
           <Tooltip
             cursor={BAR_CURSOR_PURPLE}
-            formatter={(value: number) => [`${Math.round(value).toLocaleString()} km`, 'Distanz']}
+            formatter={(value: number) => [`${Math.round(value).toLocaleString()} km`, 'Distance']}
             labelFormatter={(_value, payload) => payload?.[0]?.payload?.name ?? ''}
             contentStyle={tooltipStyle}
             labelStyle={tooltipLabelStyle}
@@ -192,8 +192,8 @@ export function OverviewDashboard({
       </ChartCard>
 
       <ChartCard
-        title="Flugzeit pro Tag"
-        subtitle="Aggregierte Missionsstunden"
+        title="Flight time per day"
+        subtitle="Aggregated mission hours"
         className="min-h-[280px]"
       >
         <BarChart data={totalFlightTimeByDay} margin={{ left: -18, right: 8, top: 12, bottom: 12 }}>
@@ -205,7 +205,7 @@ export function OverviewDashboard({
           />
           <Tooltip
             cursor={BAR_CURSOR}
-            formatter={(value: number) => [`${value.toFixed(2)} Stunden`, 'Dauer']}
+            formatter={(value: number) => [`${value.toFixed(2)} h`, 'Duration']}
             contentStyle={tooltipStyle}
             labelStyle={tooltipLabelStyle}
           />
@@ -213,7 +213,7 @@ export function OverviewDashboard({
         </BarChart>
       </ChartCard>
 
-      <ChartCard title="Flüge pro Wochentag" subtitle="Starttag (UTC)" className="min-h-[280px]">
+      <ChartCard title="Flights per weekday" subtitle="Departure day (UTC)" className="min-h-[280px]">
         <BarChart data={flightsByWeekday} margin={{ left: -18, right: 12, top: 12, bottom: 12 }}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis dataKey="label" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} interval={0} />
@@ -224,8 +224,8 @@ export function OverviewDashboard({
       </ChartCard>
 
       <ChartCard
-        title="Flugdauer‑Verteilung"
-        subtitle="Buckets in Minuten/Stunden"
+        title="Flight duration distribution"
+        subtitle="Buckets in minutes/hours"
         className="min-h-[280px]"
       >
         <BarChart data={durationHistogram} margin={{ left: -24, right: 12, top: 12, bottom: 12 }}>
@@ -237,13 +237,13 @@ export function OverviewDashboard({
         </BarChart>
       </ChartCard>
 
-      <ChartCard title="Distanz vs. Dauer" subtitle="km vs. Stunden" className="min-h-[280px]">
+      <ChartCard title="Distance vs. duration" subtitle="km vs. hours" className="min-h-[280px]">
         <ScatterChart margin={{ left: -12, right: 12, top: 12, bottom: 12 }}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
 
           <XAxis
             dataKey="distance"
-            name="Distanz"
+            name="Distance"
             type="number" // numerische Skalierung erzwingen
             tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
             tickFormatter={(v) => `${Math.round(v)} km`}
@@ -251,7 +251,7 @@ export function OverviewDashboard({
 
           <YAxis
             dataKey="hours"
-            name="Dauer"
+            name="Duration"
             tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
             tickFormatter={(v) => `${v.toFixed(1)} h`}
           />
@@ -264,10 +264,10 @@ export function OverviewDashboard({
             labelStyle={tooltipLabelStyle}
             formatter={(value: string | number, name: string) => {
               if (name === 'hours' && typeof value === 'number') {
-                return [`${value.toFixed(2)} h`, 'Dauer']
+                return [`${value.toFixed(2)} h`, 'Duration']
               }
               if (name === 'distance' && typeof value === 'number') {
-                return [`${Math.round(value)} km`, 'Distanz']
+                return [`${Math.round(value)} km`, 'Distance']
               }
               return [String(value), name]
             }}
@@ -282,7 +282,7 @@ export function OverviewDashboard({
         </ScatterChart>
       </ChartCard>
 
-      <ChartCard title="Top Start‑Flughäfen" subtitle="Anzahl Flüge" className="min-h-[280px]">
+      <ChartCard title="Top origin airports" subtitle="Flights count" className="min-h-[280px]">
         <BarChart
           data={topOrigins}
           layout="vertical"
@@ -306,7 +306,7 @@ export function OverviewDashboard({
         </BarChart>
       </ChartCard>
 
-      <ChartCard title="Top Ziel‑Flughäfen" subtitle="Anzahl Flüge" className="min-h-[280px]">
+      <ChartCard title="Top destination airports" subtitle="Flights count" className="min-h-[280px]">
         <BarChart
           data={topDestinations}
           layout="vertical"
@@ -330,7 +330,7 @@ export function OverviewDashboard({
         </BarChart>
       </ChartCard>
 
-      <ChartCard title="Top Flugzeugtypen" subtitle="Anzahl Flüge (Meta)" className="min-h-[280px]">
+      <ChartCard title="Top aircraft types" subtitle="Flights count (meta)" className="min-h-[280px]">
         <BarChart
           data={topAircraftTypes}
           layout="vertical"
@@ -351,8 +351,8 @@ export function OverviewDashboard({
       </ChartCard>
 
       <DetailCard
-        title="Start‑ vs. Zielländer"
-        subtitle="Sankey: Top Routenflüsse nach Fluganzahl"
+        title="Origin vs. destination countries"
+        subtitle="Sankey: Top route flows by flight count"
         className="min-h-[320px]"
         actions={
           <button
@@ -361,7 +361,7 @@ export function OverviewDashboard({
             className="flex items-center gap-3 rounded-full border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.82)] px-3 py-1.5 text-xs font-medium text-white shadow"
             aria-pressed={ignoreSameStartTarget}
           >
-            <span className="whitespace-nowrap tracking-wide">Gleiches Start/Ziel ignorieren</span>
+            <span className="whitespace-nowrap tracking-wide">Ignore identical origin/destination</span>
             <span
               className={cn(
                 'relative inline-flex h-4 w-8 items-center rounded-full bg-white/15 transition-colors',
@@ -402,13 +402,13 @@ export function OverviewDashboard({
                     return (
                       <div style={tooltipStyle}>
                         <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                          {value.toLocaleString('de-DE')} Flüge
+                          {value.toLocaleString('en-US')} flights
                         </div>
                         <div>
-                          Start: <strong style={{ color: '#fff' }}>{source || '–'}</strong>
+                          Origin: <strong style={{ color: '#fff' }}>{source || '–'}</strong>
                         </div>
                         <div>
-                          Ziel: <strong style={{ color: '#fff' }}>{target || '–'}</strong>
+                          Destination: <strong style={{ color: '#fff' }}>{target || '–'}</strong>
                         </div>
                       </div>
                     )
@@ -420,7 +420,7 @@ export function OverviewDashboard({
                   return (
                     <div style={tooltipStyle}>
                       <div style={{ fontWeight: 700, marginBottom: 4 }}>{nodeName}</div>
-                      <div>{value.toLocaleString('de-DE')} Flüge</div>
+                      <div>{value.toLocaleString('en-US')} flights</div>
                     </div>
                   )
                 }}

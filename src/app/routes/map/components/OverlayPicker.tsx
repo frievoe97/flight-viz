@@ -28,6 +28,7 @@ export function OverlayPicker({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
+          data-map-portal="controls"
           side="top"
           align="end"
           sideOffset={8}

@@ -11,8 +11,8 @@ export function StatsShortcut({ onClick }: StatsShortcutProps) {
       onClick={onClick}
       className="controls-btn rounded-full p-2 text-white [box-shadow:rgba(15,23,42,0.45)_0px_6px_18px]"
       style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)' }}
-      aria-label="Statistiken öffnen"
-      title="Statistiken"
+      aria-label="Open statistics"
+      title="Statistics"
     >
       <PieChart className="h-5 w-5 scale-110" aria-hidden />
     </button>

@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import MapGL, { NavigationControl } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import * as maplibregl from 'maplibre-gl'
@@ -7,11 +8,16 @@ import MapSettings from './components/MapSettings'
 import ProjectionToggle from './components/ProjectionToggle'
 import StatsShortcut from './components/StatsShortcut'
 import FlightDetailsPanel from './components/FlightDetailsPanel'
+import FilterMenu from './components/FilterMenu'
 import { useMapPageState, MAP_PADDING } from './hooks/useMapPageState'
-import { RotateCcw } from 'lucide-react'
+import type { MapFilterField } from './types'
+import { Filter, RotateCcw } from 'lucide-react'
 
 export default function MapPage() {
   const navigate = useNavigate()
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const controlPanelRef = useRef<HTMLDivElement | null>(null)
+  const filterPanelRef = useRef<HTMLDivElement | null>(null)
   const {
     data,
     mapRef,
@@ -54,7 +60,48 @@ export default function MapPage() {
     formatFt,
     formatDuration,
     resetView,
+    closeControlPanels,
+    mapFilters,
+    updateMapFilter,
+    resetMapFilters,
+    airportSuggestions,
+    countrySuggestions,
+    hasActiveFilters,
   } = useMapPageState()
+
+  const handleFilterChange = useCallback(
+    (field: MapFilterField, value: string) => {
+      updateMapFilter(field, value)
+    },
+    [updateMapFilter]
+  )
+
+  const handleFilterReset = useCallback(() => {
+    resetMapFilters()
+  }, [resetMapFilters])
+
+  useEffect(() => {
+    if (!settingsOpen && !layersOpen && !filtersOpen) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node
+      const isInsideControls = controlPanelRef.current?.contains(target)
+      const isInsideFilters = filterPanelRef.current?.contains(target)
+      const isInsideControlPortal =
+        target instanceof Element && !!target.closest('[data-map-portal="controls"]')
+
+      if ((settingsOpen || layersOpen) && !isInsideControls && !isInsideControlPortal) {
+        closeControlPanels()
+      }
+
+      if (filtersOpen && !isInsideFilters) {
+        setFiltersOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [layersOpen, settingsOpen, filtersOpen, closeControlPanels])
 
   if (!data) return <div className="h-full w-full" />
 
@@ -118,11 +165,41 @@ export default function MapPage() {
           </button>
         </div>
 
-        <div className="absolute bottom-3 left-3 z-10">
-          <StatsShortcut onClick={() => navigate('/stats')} />
+        <div
+          ref={filterPanelRef}
+          className="absolute bottom-3 left-3 z-10 flex flex-col items-start gap-2"
+        >
+          {filtersOpen ? (
+            <FilterMenu
+              values={mapFilters}
+              airportSuggestions={airportSuggestions}
+              countrySuggestions={countrySuggestions}
+              onFieldChange={handleFilterChange}
+              onReset={handleFilterReset}
+            />
+          ) : null}
+
+          <div className="flex items-center gap-2">
+            <StatsShortcut onClick={() => navigate('/stats')} />
+            <button
+              type="button"
+              className="controls-btn rounded-full p-2 text-white [box-shadow:rgba(15,23,42,0.45)_0px_6px_18px]"
+              style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)' }}
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              aria-expanded={filtersOpen}
+              aria-label={filtersOpen ? 'Hide filters' : 'Show filters'}
+              title="Filters"
+            >
+              <Filter
+                className="h-5 w-5"
+                aria-hidden
+                style={hasActiveFilters ? { color: 'var(--flight-speed)' } : undefined}
+              />
+            </button>
+          </div>
         </div>
 
-        <div className="absolute bottom-3 right-3 z-10">
+        <div ref={controlPanelRef} className="absolute bottom-3 right-3 z-10">
           <MapSettings
             settingsOpen={settingsOpen}
             layersOpen={layersOpen}

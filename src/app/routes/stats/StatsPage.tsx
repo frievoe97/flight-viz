@@ -28,10 +28,10 @@ export default function StatsPage() {
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
               <h1 className="text-sm font-semibold uppercase tracking-[0.35em] text-white/80">
-                Statistiken
+                Statistics
               </h1>
               <p className="text-xs text-white/60">
-                Übersicht und Einzelflug‑Analyse mit klarer Filter‑Leiste, kompakten KPIs und gut lesbaren Charts.
+                Overview and single-flight analysis with a clear filter bar, compact KPIs, and readable charts.
               </p>
             </div>
 
@@ -69,10 +69,9 @@ export default function StatsPage() {
           {state.filteredFlights.length === 0 ? (
             <div className="flex flex-1 items-center justify-center">
               <div className="max-w-lg rounded-xl border border-[color:var(--panel-border)] bg-[rgba(12,20,36,0.78)] p-6 text-center text-white/80 shadow-sm">
-                <div className="text-sm font-medium">Keine Ergebnisse</div>
+                <div className="text-sm font-medium">No results</div>
                 <p className="mt-2 text-[0.85rem] text-white/60">
-                  Für die aktuelle Filter‑Kombination wurden keine Flüge gefunden. Passe die Filter an
-                  oder setze sie zurück.
+                  No flights were found for the current filter combination. Adjust the filters or reset them.
                 </p>
                 <button
                   type="button"
@@ -86,7 +85,7 @@ export default function StatsPage() {
                   }}
                   className="mt-4 controls-btn rounded-md border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.72)] px-4 py-2 text-sm font-semibold uppercase tracking-[0.25em] text-white hover:bg-white/10"
                 >
-                  Filter zurücksetzen
+                  Reset filters
                 </button>
               </div>
             </div>

@@ -12,6 +12,12 @@ import { useAnalyticsLayer, type AnalyticsPickingInfo } from '../overlays/analyt
 import { useRoutesLayer, type RouteArcDatum } from '../overlays/routes'
 import { useAirportHubsLayer, type AirportHubDatum } from '../overlays/airports'
 import type { OverlayId } from '../overlays/options'
+import {
+  createDefaultMapFilters,
+  type FilterSuggestion,
+  type MapFilterField,
+  type MapFilterValues,
+} from '../types'
 
 type MapWithCamera = MaplibreMap & {
   cameraForBounds?: (
@@ -56,6 +62,129 @@ const MODE_SUPPORT: Record<'globe' | 'mercator', ReadonlyArray<OverlayId>> = {
 type ProjectionMode = keyof typeof MODE_SUPPORT
 type DeckWithOptionalRedraw = Deck & { setNeedsRedraw?: (reason: string) => void }
 
+type NormalizedFilters = {
+  startDateMs: number | null
+  endDateMs: number | null
+  originAirport: string | null
+  originCountry: string | null
+  destinationAirport: string | null
+  destinationCountry: string | null
+}
+
+const normalizeText = (value: string | null | undefined) => {
+  if (!value) return null
+  const normalized = value.trim().toLowerCase()
+  return normalized.length ? normalized : null
+}
+
+const matchesTextFilter = (
+  needle: string | null,
+  candidates: Array<string | null | undefined>
+): boolean => {
+  if (!needle) return true
+  return candidates.some((candidate) => {
+    const normalizedCandidate = normalizeText(candidate)
+    return normalizedCandidate?.includes(needle) ?? false
+  })
+}
+
+const parseDateToMs = (value: string | null | undefined, endOfDay = false): number | null => {
+  if (!value) return null
+  const suffix = endOfDay ? 'T23:59:59Z' : 'T00:00:00Z'
+  const parsed = Date.parse(`${value}${value.includes('T') ? '' : suffix}`)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const parseUtcToMs = (value: string | null | undefined): number | null => {
+  if (!value) return null
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const flightMatchesFilters = (flight: Flight, filters: NormalizedFilters): boolean => {
+  const startTime = parseUtcToMs(flight.meta?.startTimeUtc) ?? parseUtcToMs(flight.meta?.endTimeUtc)
+  if (filters.startDateMs && (startTime == null || startTime < filters.startDateMs)) return false
+  if (filters.endDateMs && (startTime == null || startTime > filters.endDateMs)) return false
+
+  const departureAirport = flight.meta?.departureAirport
+  const arrivalAirport = flight.meta?.arrivalAirport
+  const departureCountryName = getCountryName(departureAirport?.country)
+  const arrivalCountryName = getCountryName(arrivalAirport?.country)
+
+  if (
+    !matchesTextFilter(
+      filters.originAirport,
+      buildAirportTokens(departureAirport, flight.origin)
+    )
+  ) {
+    return false
+  }
+
+  if (
+    !matchesTextFilter(filters.originCountry, [departureAirport?.country, departureCountryName])
+  ) {
+    return false
+  }
+
+  if (
+    !matchesTextFilter(
+      filters.destinationAirport,
+      buildAirportTokens(arrivalAirport, flight.destination)
+    )
+  ) {
+    return false
+  }
+
+  if (
+    !matchesTextFilter(filters.destinationCountry, [arrivalAirport?.country, arrivalCountryName])
+  ) {
+    return false
+  }
+
+  return true
+}
+
+const regionDisplay =
+  typeof Intl !== 'undefined' && 'DisplayNames' in Intl
+    ? new Intl.DisplayNames(['en'], { type: 'region' })
+    : null
+const countryNameCache = new Map<string, string>()
+
+const getCountryName = (code: string | null | undefined): string | null => {
+  if (!code) return null
+  const upper = code.toUpperCase()
+  if (countryNameCache.has(upper)) return countryNameCache.get(upper) as string
+  const resolved = regionDisplay?.of(upper) ?? upper
+  countryNameCache.set(upper, resolved)
+  return resolved
+}
+
+const formatAirportLabel = (airport: AirportMeta | null | undefined, fallback?: string | null) => {
+  const name = airport?.name ?? fallback ?? airport?.iata ?? airport?.icao ?? 'Unknown airport'
+  const codes = [airport?.iata, airport?.icao].filter(Boolean)
+  const codePart = codes.length ? ` (${codes.join('/')})` : ''
+  return `${name}${codePart}`
+}
+
+const buildAirportTokens = (
+  airport: AirportMeta | null | undefined,
+  fallback: string | null | undefined
+) => {
+  const label = formatAirportLabel(airport, fallback)
+  const codes = [airport?.iata, airport?.icao].filter(Boolean).join(' ')
+  return [
+    fallback,
+    airport?.iata,
+    airport?.icao,
+    airport?.name,
+    airport?.city,
+    airport?.country,
+    getCountryName(airport?.country),
+    label,
+    `${label} ${codes}`.trim(),
+  ]
+}
+
 export function useMapPageState() {
   const [activeOverlay, setActiveOverlay] = useState<OverlayId>('trails')
   const [analyticsMetric, setAnalyticsMetric] = useState<'alt' | 'count'>('alt')
@@ -74,6 +203,7 @@ export function useMapPageState() {
   const [activeControlPanel, setActiveControlPanel] = useState<'layers' | 'settings' | null>(null)
   const [pendingOverlay, setPendingOverlay] = useState<OverlayId | null>(null)
   const [mapZoom, setMapZoom] = useState(0)
+  const [mapFilters, setMapFilters] = useState<MapFilterValues>(createDefaultMapFilters)
 
   const mapRef = useRef<MapRef | null>(null)
   const deckOverlayRef = useRef<MapboxOverlay | null>(null)
@@ -83,6 +213,99 @@ export function useMapPageState() {
   })
   const hasFitBoundsRef = useRef(false)
   const closeControlPanels = useCallback(() => setActiveControlPanel(null), [])
+
+  const hasActiveFilters = useMemo(
+    () => Object.values(mapFilters).some((value) => value.trim().length > 0),
+    [mapFilters]
+  )
+
+  const normalizedFilters = useMemo<NormalizedFilters>(() => {
+    return {
+      startDateMs: parseDateToMs(mapFilters.startDate),
+      endDateMs: parseDateToMs(mapFilters.endDate, true),
+      originAirport: normalizeText(mapFilters.originAirport),
+      originCountry: normalizeText(mapFilters.originCountry),
+      destinationAirport: normalizeText(mapFilters.destinationAirport),
+      destinationCountry: normalizeText(mapFilters.destinationCountry),
+    }
+  }, [mapFilters])
+
+  const visibleFlights = useMemo(() => {
+    if (!data?.flights) return [] as Flight[]
+    if (!hasActiveFilters) return data.flights
+    return data.flights.filter((flight) => flightMatchesFilters(flight, normalizedFilters))
+  }, [data, normalizedFilters, hasActiveFilters])
+
+  const visibleFlightIds = useMemo(() => {
+    return new Set(visibleFlights.map((flight) => flight.id))
+  }, [visibleFlights])
+
+  const filteredSegments = useMemo(() => {
+    if (!data?.flightSegments) return [] as FlightSegment[]
+    if (!visibleFlightIds.size) return [] as FlightSegment[]
+    return data.flightSegments.filter((segment) => visibleFlightIds.has(segment.flightId))
+  }, [data, visibleFlightIds])
+
+  const airportSuggestions = useMemo<FilterSuggestion[]>(() => {
+    if (!data?.flights) return []
+    const suggestions = new Map<string, FilterSuggestion>()
+    const addSuggestion = (airport: AirportMeta | null | undefined, fallback?: string | null) => {
+      if (!airport && !fallback) return
+      const label = formatAirportLabel(airport, fallback)
+      const codes = [airport?.iata, airport?.icao].filter(Boolean).join(' ')
+      const searchKey = [label, airport?.city, airport?.country, codes]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      const id = `${airport?.iata ?? ''}-${airport?.icao ?? ''}-${label}`.toLowerCase()
+      suggestions.set(id, {
+        id,
+        value: label,
+        label,
+        searchKey,
+      })
+    }
+
+    for (const flight of data.flights) {
+      addSuggestion(flight.meta?.departureAirport, flight.origin)
+      addSuggestion(flight.meta?.arrivalAirport, flight.destination)
+    }
+
+    return Array.from(suggestions.values()).sort((a, b) => a.label.localeCompare(b.label))
+  }, [data])
+
+  const countrySuggestions = useMemo<FilterSuggestion[]>(() => {
+    if (!data?.flights) return []
+    const countries = new Set<string>()
+    data.flights.forEach((flight) => {
+      const departureCountry = flight.meta?.departureAirport?.country
+      const arrivalCountry = flight.meta?.arrivalAirport?.country
+      if (departureCountry) countries.add(departureCountry)
+      if (arrivalCountry) countries.add(arrivalCountry)
+    })
+    return Array.from(countries)
+      .sort((a, b) => a.localeCompare(b))
+      .map((value) => {
+        const label = getCountryName(value) ?? value
+        return {
+          id: value.toLowerCase(),
+          value: label,
+          label,
+          searchKey: `${value.toLowerCase()} ${label.toLowerCase()}`.trim(),
+        }
+      })
+  }, [data])
+
+  const updateMapFilter = useCallback((field: MapFilterField, value: string) => {
+    setMapFilters((prev) => {
+      if (prev[field] === value) return prev
+      return { ...prev, [field]: value }
+    })
+  }, [])
+
+  const resetMapFilters = useCallback(() => {
+    setMapFilters(createDefaultMapFilters())
+  }, [])
 
   const requestDeckRedraw = useCallback((reason: string) => {
     const overlayWithDeck = deckOverlayRef.current as unknown as {
@@ -116,9 +339,12 @@ export function useMapPageState() {
       if (!data) return
       const mapInstance = mapRef.current?.getMap?.() as MapWithCamera | undefined
       if (!mapInstance) return
+      const flightsForBounds =
+        visibleFlights.length > 0 ? visibleFlights : (data.flights ?? ([] as Flight[]))
+      if (!flightsForBounds.length) return
 
       const bounds = new maplibregl.LngLatBounds()
-      for (const flight of data.flights) {
+      for (const flight of flightsForBounds) {
         for (const point of flight.points) {
           const [lon, lat] = point.position
           if (Number.isFinite(lon) && Number.isFinite(lat)) {
@@ -163,21 +389,21 @@ export function useMapPageState() {
       setMapZoom(targetZoom)
       hasFitBoundsRef.current = true
     },
-    [data]
+    [data, visibleFlights]
   )
 
   useEffect(() => {
+    const mapInstance = mapRef.current?.getMap?.()
     return () => {
-      const map = mapRef.current?.getMap?.()
-      if (map && deckOverlayRef.current) {
+      if (mapInstance && deckOverlayRef.current) {
         deckOverlayRef.current.setProps({ layers: [] })
-        map.removeControl(deckOverlayRef.current)
-        map.dragRotate?.enable?.()
-        map.touchZoomRotate?.enableRotation?.()
-        map.touchZoomRotate?.enable?.()
-        map.keyboard?.enable?.()
-        map.doubleClickZoom?.enable?.()
-        map.setMaxPitch(85)
+        mapInstance.removeControl(deckOverlayRef.current)
+        mapInstance.dragRotate?.enable?.()
+        mapInstance.touchZoomRotate?.enableRotation?.()
+        mapInstance.touchZoomRotate?.enable?.()
+        mapInstance.keyboard?.enable?.()
+        mapInstance.doubleClickZoom?.enable?.()
+        mapInstance.setMaxPitch(85)
       }
       deckOverlayRef.current?.finalize?.()
       deckOverlayRef.current = null
@@ -190,6 +416,15 @@ export function useMapPageState() {
       setHoveredFlightId(null)
     }
   }, [isSegments])
+
+  useEffect(() => {
+    if (selectedFlightId && !visibleFlightIds.has(selectedFlightId)) {
+      setSelectedFlightId(null)
+    }
+    if (hoveredFlightId && !visibleFlightIds.has(hoveredFlightId)) {
+      setHoveredFlightId(null)
+    }
+  }, [selectedFlightId, hoveredFlightId, visibleFlightIds])
 
   const configureInteractions = useCallback((mode: ProjectionMode) => {
     const map = mapRef.current?.getMap?.()
@@ -334,7 +569,6 @@ export function useMapPageState() {
       const activate = () => {
         setPendingOverlay(null)
         setActiveOverlay(id)
-        closeControlPanels()
       }
 
       if (allowedOverlaySet.has(id)) {
@@ -352,10 +586,9 @@ export function useMapPageState() {
         return
       }
       setPendingOverlay(id)
-      closeControlPanels()
       switchProjectionMode(desiredMode)
     },
-    [allowedOverlaySet, overlaySupportMap, projectionMode, switchProjectionMode, closeControlPanels]
+    [allowedOverlaySet, overlaySupportMap, projectionMode, switchProjectionMode]
   )
 
   useEffect(() => {
@@ -369,12 +602,12 @@ export function useMapPageState() {
   }, [activeOverlay])
 
   useEffect(() => {
-    if (!ready || !data || !isSegments) return
+    if (!ready || !isSegments) return
+    if (!selectedFlightId) return
     const mapInstance = mapRef.current?.getMap?.() as MapWithCamera | undefined
     if (!mapInstance) return
-    if (!selectedFlightId) return
 
-    const flight = data.flights.find((f) => f.id === selectedFlightId)
+    const flight = visibleFlights.find((f) => f.id === selectedFlightId)
     if (!flight?.points?.length) return
     const bounds = new maplibregl.LngLatBounds()
     for (const p of flight.points) {
@@ -428,19 +661,27 @@ export function useMapPageState() {
       bearing,
       pitch: projectionMode === 'mercator' ? SEGMENT_FOCUS_PITCH : 0,
     })
-  }, [ready, data, selectedFlightId, isSegments, projectionMode])
+  }, [ready, visibleFlights, selectedFlightId, isSegments, projectionMode])
 
   const altitudeScale = useMemo(() => {
-    if (!data) return 1
-    return Math.max(1, data.aggregatedStats.maxAltitudeFt)
-  }, [data])
+    let maxFromFlights = 0
+    for (const flight of visibleFlights) {
+      const stats = flight.altitudeStats
+      const candidate = stats?.max ?? stats?.avg ?? stats?.min ?? null
+      if (Number.isFinite(candidate as number)) {
+        maxFromFlights = Math.max(maxFromFlights, candidate as number)
+      }
+    }
+    if (maxFromFlights > 0) return maxFromFlights
+    const fallback = data?.aggregatedStats?.maxAltitudeFt
+    return Number.isFinite(fallback as number) ? Math.max(1, fallback as number) : 1
+  }, [visibleFlights, data])
 
   const flightsBase = useMemo(() => {
-    if (!data) return [] as Array<Pick<Flight, 'id' | 'name' | 'points'>>
-    return data.flights
+    return visibleFlights
       .filter((f) => f.points.length >= 2)
       .map((f) => ({ id: f.id, name: f.name, points: f.points }))
-  }, [data])
+  }, [visibleFlights])
 
   const flightsLayer = useAnimatedFlightsOverlay({
     flights: flightsBase,
@@ -451,9 +692,8 @@ export function useMapPageState() {
   })
 
   const trips = useMemo<Trip[]>(() => {
-    if (!data) return []
     const out: Trip[] = []
-    for (const f of data.flights) {
+    for (const f of visibleFlights) {
       if (f.points.length < 2) continue
       const path: [number, number, number][] = f.points.map((p) => [
         p.position[0],
@@ -465,7 +705,7 @@ export function useMapPageState() {
       out.push({ id: f.id, path, timestamps, duration })
     }
     return out
-  }, [data])
+  }, [visibleFlights])
 
   const trailLayers = useTrailsOverlay({
     trips,
@@ -475,15 +715,14 @@ export function useMapPageState() {
   })
 
   const analyticsPoints = useMemo(() => {
-    if (!data) return [] as Array<{ position: [number, number]; altitude: number }>
     const list: Array<{ position: [number, number]; altitude: number }> = []
-    for (const f of data.flights) {
+    for (const f of visibleFlights) {
       for (const p of f.points) {
         list.push({ position: [p.position[0], p.position[1]], altitude: p.altitudeFeet ?? 0 })
       }
     }
     return list
-  }, [data])
+  }, [visibleFlights])
 
   const analyticsLayer = useAnalyticsLayer({
     points: analyticsPoints,
@@ -493,9 +732,8 @@ export function useMapPageState() {
   })
 
   const routeArcs = useMemo<RouteArcDatum[]>(() => {
-    if (!data) return []
     const arcs: RouteArcDatum[] = []
-    for (const flight of data.flights) {
+    for (const flight of visibleFlights) {
       if (!flight.points.length) continue
       const startPoint = flight.points[0]
       const endPoint = flight.points[flight.points.length - 1]
@@ -524,10 +762,10 @@ export function useMapPageState() {
       })
     }
     return arcs
-  }, [data])
+  }, [visibleFlights])
 
   const airportHubs = useMemo<AirportHubDatum[]>(() => {
-    if (!data) return []
+    if (!visibleFlights.length) return []
     type HubAccumulator = AirportHubDatum & { altitudeSum: number; altitudeCount: number }
     const hubs = new Map<string, HubAccumulator>()
     const addAirport = (
@@ -564,7 +802,7 @@ export function useMapPageState() {
         altitudeCount: hasAltitude ? 1 : 0,
       })
     }
-    data.flights.forEach((flight) => {
+    visibleFlights.forEach((flight) => {
       if (!flight.points.length) return
       const avgAltitudeFt = flight.altitudeStats?.avg ?? null
       const departurePoint = flight.points[0]
@@ -586,7 +824,7 @@ export function useMapPageState() {
         avgAltitudeFt: altitudeCount > 0 ? altitudeSum / altitudeCount : null,
       }))
       .sort((a, b) => b.flights - a.flights)
-  }, [data])
+  }, [visibleFlights])
 
   const routesLayer = useRoutesLayer({
     routes: routeArcs,
@@ -602,7 +840,7 @@ export function useMapPageState() {
   })
 
   const segmentsLayer = useSegmentsLayer({
-    segments: data?.flightSegments ?? [],
+    segments: filteredSegments,
     isActive: isSegments,
     selectedFlightId,
     hoveredFlightId,
@@ -730,7 +968,7 @@ export function useMapPageState() {
     })
   }, [ready, layers, getTooltip, isSegments, handleHover, handleClick])
 
-  const selectedFlight = isSegments ? findSelectedFlight(data?.flights, selectedFlightId) : null
+  const selectedFlight = isSegments ? findSelectedFlight(visibleFlights, selectedFlightId) : null
   const chartData = selectedFlight
     ? selectedFlight.points.map((p, index) => ({
         distanceKm: Number.isFinite(p.distanceKm as number) ? (p.distanceKm as number) : index,
@@ -816,6 +1054,13 @@ export function useMapPageState() {
     formatFt,
     formatDuration,
     resetView,
+    closeControlPanels,
+    mapFilters,
+    updateMapFilter,
+    resetMapFilters,
+    airportSuggestions,
+    countrySuggestions,
+    hasActiveFilters,
   }
 }
 

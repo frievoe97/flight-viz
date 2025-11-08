@@ -57,7 +57,7 @@ export default function Topbar({
   className,
 }: TopbarProps) {
   const counterText = useMemo(() => {
-    return `Zeige ${filteredCount.toLocaleString('de-DE')} von ${totalCount.toLocaleString('de-DE')} Flügen`
+    return `Showing ${filteredCount.toLocaleString('en-US')} of ${totalCount.toLocaleString('en-US')} flights`
   }, [filteredCount, totalCount])
 
   return (
@@ -72,18 +72,18 @@ export default function Topbar({
           <Link
             to="/map"
             className="controls-btn inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] hover:bg-white/10"
-            aria-label="Zur Karte"
-            title="Zur Karte"
+            aria-label="Back to map"
+            title="Back to map"
           >
             <MapIcon className="h-4 w-4" aria-hidden />
-            <span className="hidden sm:inline">Zur Karte</span>
+            <span className="hidden sm:inline">Back to map</span>
           </Link>
           <SegmentedControl
             value={activeView}
             onChange={onActiveViewChange}
             options={[
-              { value: 'overview', label: 'Übersicht', icon: <LineChart className="h-4 w-4" /> },
-              { value: 'flight', label: 'Einzelflug', icon: <Plane className="h-4 w-4" /> },
+              { value: 'overview', label: 'Overview', icon: <LineChart className="h-4 w-4" /> },
+              { value: 'flight', label: 'Single flight', icon: <Plane className="h-4 w-4" /> },
             ]}
           />
           <div className="hidden md:block text-xs text-white/60">{counterText}</div>
@@ -96,7 +96,7 @@ export default function Topbar({
               type="text"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Name, Kennung, Flughafen…"
+              placeholder="Name, identifier, airport…"
               className="min-w-0 flex-1 bg-transparent text-white placeholder:text-white/40 focus:outline-none"
             />
           </label>
@@ -106,38 +106,38 @@ export default function Topbar({
             className="controls-btn inline-flex items-center gap-2 rounded-md border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.65)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white hover:bg-white/10"
           >
             <FilterX className="h-4 w-4" aria-hidden />
-            <span>Filter zurücksetzen</span>
+            <span>Reset filters</span>
           </button>
         </div>
       </div>
 
       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <FilterPopover
-          label="Datum"
+          label="Date"
           value={filterDate}
           options={filterOptions.dates}
           onChange={onFilterDateChange}
         />
         <FilterPopover
-          label="Start-Flughafen"
+          label="Origin airport"
           value={filterOrigin}
           options={filterOptions.origins}
           onChange={onFilterOriginChange}
         />
         <FilterPopover
-          label="Ziel-Flughafen"
+          label="Destination airport"
           value={filterDestination}
           options={filterOptions.destinations}
           onChange={onFilterDestinationChange}
         />
         <FilterPopover
-          label="Start-Land"
+          label="Origin country"
           value={filterOriginCountry}
           options={filterOptions.originCountries}
           onChange={onFilterOriginCountryChange}
         />
         <FilterPopover
-          label="Ziel-Land"
+          label="Destination country"
           value={filterDestinationCountry}
           options={filterOptions.destinationCountries}
           onChange={onFilterDestinationCountryChange}
