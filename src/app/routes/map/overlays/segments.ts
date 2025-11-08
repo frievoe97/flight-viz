@@ -2,9 +2,15 @@ import { useMemo } from 'react'
 import { LineLayer } from '@deck.gl/layers'
 import type { Flight, FlightSegment } from '@/data'
 import { alpha, colors, lerpColor } from '@/lib/theme/tokens'
+import type { Theme } from '@/lib/theme/useTheme'
 
 const FEET_TO_METERS = 0.3048
-const VERTICAL_EXAGGERATION = 1
+const VERTICAL_EXAGGERATION = 3
+
+const LIGHT_MODE_COLORS: { low: [number, number, number]; high: [number, number, number] } = {
+  low: [60, 100, 180], // kräftiges Blau
+  high: [200, 60, 60], // warmes Rot
+}
 
 export function useSegmentsLayer({
   segments,
@@ -13,6 +19,7 @@ export function useSegmentsLayer({
   hoveredFlightId,
   altitudeScale,
   widthScale,
+  theme = 'dark',
 }: {
   segments: FlightSegment[]
   isActive: boolean
@@ -20,9 +27,12 @@ export function useSegmentsLayer({
   hoveredFlightId: string | null
   altitudeScale: number
   widthScale: number
+  theme?: Theme
 }) {
   return useMemo(() => {
     if (!isActive) return null
+    const palette = theme === 'light' ? LIGHT_MODE_COLORS : colors.flight
+
     return new LineLayer<FlightSegment>({
       id: 'flight-segments',
       data: segments,
@@ -46,11 +56,7 @@ export function useSegmentsLayer({
         const zFt = Number.isFinite(d.startAltitudeFeet) ? d.startAltitudeFeet : 0
         const z = zFt * FEET_TO_METERS * VERTICAL_EXAGGERATION
         const ratio = Math.max(0, Math.min(z / 10000, 1))
-        const base = lerpColor(colors.flight.low, colors.flight.high, ratio) as [
-          number,
-          number,
-          number
-        ]
+        const base = lerpColor(palette.low, palette.high, ratio) as [number, number, number]
         let a: number
         if (selectedFlightId) {
           a = d.flightId === selectedFlightId ? alpha.opaque : alpha.faded
@@ -70,16 +76,13 @@ export function useSegmentsLayer({
       },
       updateTriggers: {
         getWidth: [selectedFlightId, altitudeScale, widthScale],
-        getColor: [selectedFlightId, hoveredFlightId, altitudeScale],
+        getColor: [selectedFlightId, hoveredFlightId, altitudeScale, theme],
       },
     })
-  }, [segments, isActive, selectedFlightId, hoveredFlightId, altitudeScale, widthScale])
+  }, [segments, isActive, selectedFlightId, hoveredFlightId, altitudeScale, widthScale, theme])
 }
 
-export function findSelectedFlight(
-  flights: Flight[] | undefined,
-  selectedFlightId: string | null
-) {
+export function findSelectedFlight(flights: Flight[] | undefined, selectedFlightId: string | null) {
   if (!flights || !selectedFlightId) return null
   return flights.find((f) => f.id === selectedFlightId) ?? null
 }

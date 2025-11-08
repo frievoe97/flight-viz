@@ -444,7 +444,7 @@ function buildFlight(path: string, geojsonSource: string, metaModules: Record<st
   const origin = deriveAirportCode(normalizedMeta?.departureAirport, fallbackCodes.origin)
   const destination = deriveAirportCode(normalizedMeta?.arrivalAirport, fallbackCodes.destination)
 
-  console.log(`Building flight ${id} (${origin ?? '?'} → ${destination ?? '?'})`)
+  // console.log(`Building flight ${id} (${origin ?? '?'} → ${destination ?? '?'})`)
 
   let feature: LineStringFeature | null = null
   const g = geojson as FeatureCollection | LineStringFeature

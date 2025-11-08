@@ -652,7 +652,27 @@ export function OverviewDashboard({
 // Custom colored Sankey link
 // --------------------------------------------
 function ColoredSankeyLink(props: SankeyLinkProps & { d?: string }) {
-  const { payload, linkWidth, sourceX, sourceY, targetX, targetY, d, ...rest } = props as any
+  const {
+    payload,
+    linkWidth,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    d,
+    // Recharts internal props we don't want to forward to DOM
+    // (intentionally omitted in the returned element)
+    sourceControlX: _sourceControlX,
+    sourceControlY: _sourceControlY,
+    targetControlX: _targetControlX,
+    targetControlY: _targetControlY,
+    // whitelisted DOM props
+    onMouseEnter,
+    onMouseLeave,
+    onClick,
+    className,
+    style,
+  } = props as any
 
   const color = (payload as { color?: string })?.color ?? 'var(--flight-speed)'
   const curvature = 0.5
@@ -664,13 +684,17 @@ function ColoredSankeyLink(props: SankeyLinkProps & { d?: string }) {
 
   return (
     <path
-      {...rest}
       d={path}
       stroke={color}
       fill={color}
       strokeWidth={width}
       fillOpacity={0.9}
       strokeOpacity={0.95}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onClick={onClick}
+      className={className}
+      style={style}
     />
   )
 }

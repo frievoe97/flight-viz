@@ -1,5 +1,8 @@
 import { useMemo } from 'react'
 import { ScatterplotLayer } from '@deck.gl/layers'
+import type { Theme } from '@/lib/theme/useTheme'
+// import { useTheme } from '@/lib/theme/useTheme'
+// const { theme } = useTheme()
 
 export type AirportHubDatum = {
   id: string
@@ -12,54 +15,51 @@ export type AirportHubDatum = {
   avgAltitudeFt: number | null
 }
 
-const clamp = (value: number, min = 0, max = 255) => Math.max(min, Math.min(max, value))
-const MAX_REFERENCE_ALTITUDE_FT = 45000
-
 export function useAirportHubsLayer({
   hubs,
   isActive,
   zoom,
   sizeScale,
+  opacity = 0.95,
+  theme = 'dark',
 }: {
   hubs: AirportHubDatum[]
   isActive: boolean
   zoom: number
   sizeScale: number
+  opacity?: number
+  theme?: Theme
 }) {
   return useMemo(() => {
     if (!isActive || !hubs.length) return null
+
     const zoomFactor = Number.isFinite(zoom) ? Math.min(2.2, Math.max(0.3, (zoom - 1) / 5)) : 0.6
+
     return new ScatterplotLayer<AirportHubDatum>({
       id: 'airport-hubs',
       data: hubs,
       pickable: true,
       stroked: true,
+      opacity,
       radiusUnits: 'pixels',
       lineWidthUnits: 'pixels',
       radiusMinPixels: 4,
       radiusMaxPixels: 48,
-      opacity: 0.95,
       getRadius: (d) => {
         const intensity = Math.sqrt(d.flights)
         const base = 6 + intensity * 3
         return base * zoomFactor
       },
-      getFillColor: (d) => {
-        const ratio = Math.max(
-          0,
-          Math.min(
-            (d.avgAltitudeFt ?? MAX_REFERENCE_ALTITUDE_FT / 3) / MAX_REFERENCE_ALTITUDE_FT,
-            1
-          )
-        )
-        const r = clamp(80 + ratio * 120)
-        const g = clamp(140 + ratio * 40)
-        const b = clamp(220 - ratio * 80)
-        return [Math.round(r), Math.round(g), Math.round(b), 210]
-      },
-      getLineColor: () => [255, 255, 255, 200],
+      getFillColor: () =>
+        theme === 'light'
+          ? ([0, 0, 0, 210] as [number, number, number, number])
+          : ([255, 255, 255, 210] as [number, number, number, number]),
+      getLineColor: () => [255, 255, 255, 200] as [number, number, number, number],
       getLineWidth: (d) => (1 + Math.min(d.flights, 20) * 0.05) * sizeScale,
       radiusScale: sizeScale,
+      updateTriggers: {
+        getFillColor: [theme], // <— wichtig
+      },
     })
-  }, [hubs, isActive, zoom, sizeScale])
+  }, [hubs, isActive, zoom, sizeScale, opacity, theme])
 }

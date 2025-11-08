@@ -307,8 +307,8 @@ const LocationSearch = forwardRef<LocationSearchHandle, LocationSearchProps>(fun
     <div ref={containerRef} className="relative flex items-start">
       <button
         type="button"
-        className="controls-btn rounded-full p-2 text-white [box-shadow:rgba(15,23,42,0.45)_0px_6px_18px]"
-        style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)' }}
+        className="controls-btn rounded-full p-2"
+        style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)', boxShadow: 'var(--controls-shadow)' }}
         onClick={togglePanel}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -322,10 +322,11 @@ const LocationSearch = forwardRef<LocationSearchHandle, LocationSearchProps>(fun
         <div
           role="dialog"
           aria-label="Orte suchen"
-          className="absolute left-full top-0 z-20 ml-2 w-72 max-w-[calc(100vw-4rem)] rounded-2xl border border-[color:var(--panel-border)] bg-[#0f172a]/95 text-white shadow-2xl backdrop-blur"
+          className="absolute left-full top-0 z-20 ml-2 w-72 max-w-[calc(100vw-4rem)] rounded-2xl border border-[color:var(--panel-border)] shadow-2xl backdrop-blur"
+          style={{ backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
         >
-          <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-            <Search className="h-4 w-4 text-white/60" aria-hidden />
+          <div className="flex items-center gap-2 border-b px-3 py-2" style={{ borderColor: 'var(--panel-border)' }}>
+            <Search className="h-4 w-4 opacity-60" aria-hidden />
             <input
               ref={inputRef}
               type="search"
@@ -333,13 +334,14 @@ const LocationSearch = forwardRef<LocationSearchHandle, LocationSearchProps>(fun
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ort suchen..."
-              className="w-full bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
+              className="w-full bg-transparent text-sm placeholder:opacity-40 focus:outline-none"
+              style={{ color: 'var(--controls-fg)' }}
             />
             {query ? (
               <button
                 type="button"
                 aria-label="Eingabe löschen"
-                className="rounded p-1 text-white/70 hover:bg-white/10"
+                className="rounded p-1 opacity-70 hover:bg-[color:var(--panel-border)]/10"
                 onClick={() => {
                   setQuery('')
                   setActiveIndex(0)
@@ -352,16 +354,18 @@ const LocationSearch = forwardRef<LocationSearchHandle, LocationSearchProps>(fun
           </div>
           <div className="max-h-80 overflow-y-auto py-1" role="listbox">
             {!query.trim() ? (
-              <div className="px-3 py-4 text-sm text-white/70">
+              <div className="px-3 py-4 text-sm opacity-70">
                 Tippe mindestens {MIN_QUERY_LENGTH} Zeichen, um die Suche zu starten.
               </div>
             ) : loading ? (
-              <div className="flex items-center gap-2 px-3 py-4 text-sm text-white/70">
+              <div className="flex items-center gap-2 px-3 py-4 text-sm opacity-70">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                 Suche läuft...
               </div>
             ) : error ? (
-              <div className="px-3 py-4 text-sm text-red-300">{error}</div>
+              <div className="px-3 py-4 text-sm" style={{ color: '#dc2626' }}>
+                {error}
+              </div>
             ) : results.length ? (
               <ul ref={listRef}>
                 {results.map((result, index) => (
@@ -369,22 +373,22 @@ const LocationSearch = forwardRef<LocationSearchHandle, LocationSearchProps>(fun
                     <button
                       type="button"
                       data-index={index}
-                      className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-start hover:bg-white/10 focus:bg-white/10 ${
-                        index === activeIndex ? 'bg-white/10' : ''
+                      className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-start hover:bg-[color:var(--panel-border)]/10 focus:bg-[color:var(--panel-border)]/10 ${
+                        index === activeIndex ? 'bg-[color:var(--panel-border)]/10' : ''
                       }`}
                       onMouseEnter={() => setActiveIndex(index)}
                       onClick={() => handleSelect(result)}
                     >
                       <span className="text-sm font-semibold leading-tight">{result.label}</span>
                       {result.subtitle ? (
-                        <span className="text-xs text-white/70">{result.subtitle}</span>
+                        <span className="text-xs opacity-70">{result.subtitle}</span>
                       ) : null}
                     </button>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="px-3 py-4 text-sm text-white/70">
+              <div className="px-3 py-4 text-sm opacity-70">
                 Keine Treffer. Bitte Suchbegriff anpassen.
               </div>
             )}

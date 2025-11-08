@@ -5,12 +5,6 @@ export const overlayOptions = [
   { id: 'analytics', label: 'Hex Heatmap', description: 'Altitude or density analysis' },
   { id: 'routes', label: 'Route Arcs', description: 'Great-circle links origin -> destination' },
   { id: 'airports', label: 'Airport Hubs', description: 'Traffic bubbles per airport' },
-  { id: 'speed-columns', label: 'Speed Towers', description: 'Extruded hotspots by cruise speed' },
-  {
-    id: 'climb-bursts',
-    label: 'Climb Bursts',
-    description: 'Highlights aggressive climb/descent moments',
-  },
 ] as const
 
 export type OverlayId = (typeof overlayOptions)[number]['id']

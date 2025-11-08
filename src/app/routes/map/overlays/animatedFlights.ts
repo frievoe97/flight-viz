@@ -2,23 +2,43 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ScenegraphLayer } from '@deck.gl/mesh-layers'
 import type { ScenegraphLayerProps } from '@deck.gl/mesh-layers'
 import type { Flight } from '@/data'
+import type { Theme } from '@/lib/theme/useTheme'
 
-const MODEL_URL =
-  'https://raw.githubusercontent.com/visgl/deck.gl-data/master/examples/scenegraph-layer/airplane.glb'
+const resolveModelAsset = (asset: string) => {
+  const base = import.meta.env.BASE_URL ?? '/'
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`
+  const trimmedAsset = asset.startsWith('/') ? asset.slice(1) : asset
+  return `${normalizedBase}${trimmedAsset}`
+}
+
+const MODEL_URL_BY_THEME: Record<Theme, string> = {
+  // light: resolveModelAsset('models/airplane_black_min.glb'),
+  // dark: resolveModelAsset('models/airplane_white_min.glb'),
+  light: resolveModelAsset('models/airplane_black.glb'),
+  dark: resolveModelAsset('models/airplane_white.glb'),
+}
+
+const MODEL_COLOR_BY_THEME: Record<Theme, [number, number, number]> = {
+  light: [25, 25, 25],
+  dark: [240, 240, 240],
+}
 
 const ANIMATIONS: ScenegraphLayerProps['_animations'] = {
   '*': { speed: 1 },
 }
 
-const BASE_SPEED = 0.004
+const BASE_SPEED = 0.08
 const SMOOTH = 0.35
 const FLIGHT_FADE_WINDOW = 0.05
 const TARGET_FPS = 30
 const FRAME_INTERVAL = 1 / TARGET_FPS
-const MIN_ZOOM_FOR_SCALE = 3
-const MAX_ZOOM_FOR_SCALE = 10
-const MIN_MODEL_SCALE = 1000
-const MAX_MODEL_SCALE = 100
+const BASE_MODEL_SCALE = 20 // size at reference zoom before user scaling
+const REFERENCE_ZOOM = 6
+const MIN_ZOOM_FOR_SCALE = 1.5
+const MAX_ZOOM_FOR_SCALE = 26
+const PLANE_SIZE_RATIO_MIN = 0.4
+const PLANE_SIZE_RATIO_MAX = 2.6
+const MODEL_ROLL_OFFSET = 0
 
 type FlightLite = Pick<Flight, 'id' | 'name' | 'points'>
 type ProjectionMode = 'globe' | 'mercator'
@@ -91,12 +111,18 @@ export function useAnimatedFlightsOverlay({
   speedMultiplier,
   projectionMode,
   zoom,
+  planeScale = 1,
+  theme,
+  isPaused = false,
 }: {
   flights: FlightLite[]
   isActive: boolean
   speedMultiplier: number
   projectionMode: ProjectionMode
   zoom: number
+  planeScale?: number
+  theme: Theme
+  isPaused?: boolean
 }) {
   const progressRef = useRef<Map<string, number>>(new Map())
   const lastStateRef = useRef<Map<string, StateEntry>>(new Map())
@@ -120,7 +146,7 @@ export function useAnimatedFlightsOverlay({
 
   // animation loop (fixed update rate via accumulator)
   useEffect(() => {
-    if (!isActive || !flights.length) return () => undefined
+    if (!isActive || !flights.length || isPaused) return () => undefined
     let last = performance.now()
     const loop = (now: number) => {
       const dt = (now - last) / 1000
@@ -149,7 +175,7 @@ export function useAnimatedFlightsOverlay({
     }
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [isActive, flights, speedMultiplier])
+  }, [isActive, flights, speedMultiplier, isPaused])
 
   useEffect(() => {
     // Switching projection can introduce big jumps, so reset smoothing state.
@@ -159,11 +185,17 @@ export function useAnimatedFlightsOverlay({
   const layer = useMemo(() => {
     if (!isActive || !flights.length) return null
 
-    const clampedZoom = clamp(zoom, MIN_ZOOM_FOR_SCALE, MAX_ZOOM_FOR_SCALE)
+    const modelUrl = MODEL_URL_BY_THEME[theme] ?? MODEL_URL_BY_THEME.dark
+    const [colorR, colorG, colorB] = MODEL_COLOR_BY_THEME[theme] ?? MODEL_COLOR_BY_THEME.dark
+
+    const zoomInput = Number.isFinite(zoom) ? (zoom as number) : REFERENCE_ZOOM
+    const effectiveZoom = clamp(zoomInput, MIN_ZOOM_FOR_SCALE, MAX_ZOOM_FOR_SCALE)
+    const counterScale = Math.pow(2, REFERENCE_ZOOM - effectiveZoom) // neutralizes camera zoom
     const zoomSpan = Math.max(0.0001, MAX_ZOOM_FOR_SCALE - MIN_ZOOM_FOR_SCALE)
-    const zoomProgress = (clampedZoom - MIN_ZOOM_FOR_SCALE) / zoomSpan
-    const scaleFactor = Math.pow(MAX_MODEL_SCALE / MIN_MODEL_SCALE, zoomProgress)
-    const modelScale = MIN_MODEL_SCALE * Math.max(0.0001, scaleFactor)
+    const zoomT = clamp((effectiveZoom - MIN_ZOOM_FOR_SCALE) / zoomSpan, 0, 1)
+    const ratio = lerp(PLANE_SIZE_RATIO_MIN, PLANE_SIZE_RATIO_MAX, zoomT)
+    const planeScaleWithZoom = Math.max(0.1, planeScale) * ratio
+    const modelScale = BASE_MODEL_SCALE * counterScale * planeScaleWithZoom
     const scaleVector: [number, number, number] = [modelScale, modelScale, modelScale]
 
     const entries: LayerEntry[] = flights.map((f) => {
@@ -193,12 +225,11 @@ export function useAnimatedFlightsOverlay({
       const bearing = initialBearingDeg(a.position[1], lonA, b.position[1], lonBunwrapped)
 
       // Scenegraph orientation (Deck): [pitch, yaw, roll] in degrees.
-      // airplane.glb „guckt“ entlang +X nach vis.gl, daher: roll = 90.
       // Für die Globus-Projektion drehen wir um 180° (Z-Achse), damit die Modelle vorwärts zeigen.
       const MODEL_YAW_OFFSET = 0
       const projectionYawAdjustment = projectionMode === 'globe' ? 180 : 0
       const yaw = -bearing + MODEL_YAW_OFFSET + projectionYawAdjustment
-      const roll = 90
+      const roll = MODEL_ROLL_OFFSET
 
       // Pitch aus Höhenänderung und horizontaler Distanz (meter-genähert)
       const dAlt = (b.altitudeMeters ?? 0) - (a.altitudeMeters ?? 0)
@@ -229,24 +260,24 @@ export function useAnimatedFlightsOverlay({
     })
 
     return new ScenegraphLayer<LayerEntry>({
-      id: 'flights-animated',
+      id: `flights-animated-${theme}`,
       data: entries,
       pickable: true,
-      scenegraph: MODEL_URL,
+      scenegraph: modelUrl,
       _animations: ANIMATIONS,
       sizeScale: 1,
       getScale: () => scaleVector,
       getPosition: (d) => d.position,
       getOrientation: (d) => d.orientation,
-      getColor: (d) => [255, 255, 255, Math.round(d.opacity * 255)],
+      getColor: (d) => [colorR, colorG, colorB, Math.round(d.opacity * 255)],
       updateTriggers: {
         getPosition: [tick],
         getOrientation: [tick],
-        getColor: [tick],
+        getColor: [tick, colorR, colorG, colorB],
         getScale: [modelScale],
       },
     })
-  }, [isActive, flights, tick, projectionMode, zoom])
+  }, [isActive, flights, tick, projectionMode, zoom, planeScale, theme, isPaused])
 
   return layer
 }

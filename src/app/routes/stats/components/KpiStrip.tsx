@@ -70,15 +70,18 @@ export function KpiStrip({ summary, formatter }: KpiStripProps) {
   ]
 
   return (
-    <section className="rounded-xl border border-[color:var(--panel-border)] bg-[rgba(12,20,36,0.78)] p-4 text-white shadow-sm backdrop-blur">
+    <section
+      className="rounded-xl border border-[color:var(--panel-border)] p-4 shadow-sm"
+      style={{ backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
+    >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {items.map((item) => (
           <div key={item.label} className="space-y-1">
-            <div className="text-[0.6rem] uppercase tracking-[0.3em] text-white/60">
+            <div className="text-[0.6rem] uppercase tracking-[0.3em] opacity-60">
               {item.label}
             </div>
-            <div className="text-xl font-semibold text-white/90">{item.value}</div>
-            <div className="text-[0.7rem] text-white/50">{item.hint}</div>
+            <div className="text-xl font-semibold opacity-90">{item.value}</div>
+            <div className="text-[0.7rem] opacity-60">{item.hint}</div>
           </div>
         ))}
       </div>

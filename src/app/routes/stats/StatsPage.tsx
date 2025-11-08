@@ -12,14 +12,17 @@ export default function StatsPage() {
   // const overviewCounterText = `Showing ${state.filteredFlights.length.toLocaleString('en-US')} of ${state.flights.length.toLocaleString('en-US')} flights`
   const overviewNavigationCard =
     state.activeView === 'overview' ? (
-      <section className="rounded-xl border border-[color:var(--panel-border)] bg-[rgba(12,20,36,0.78)] p-4 text-white shadow-sm backdrop-blur h-full">
+      <section
+        className="rounded-xl border border-[color:var(--panel-border)] p-4 shadow-sm h-full"
+        style={{ backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
+      >
         <div className="flex flex-col gap-3">
           <div>
-            <div className="text-[0.6rem] uppercase tracking-[0.3em] text-white/60">Navigation</div>
+            <div className="text-[0.6rem] uppercase tracking-[0.3em] opacity-60">Navigation</div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Link
                 to="/map"
-                className="controls-btn inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] hover:bg-white/10"
+                className="controls-btn inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] hover:bg-[color:var(--panel-border)]/10"
               >
                 <MapIcon className="h-4 w-4" aria-hidden />
                 {/* <span className="hidden sm:inline">Back to map</span> */}
@@ -42,10 +45,10 @@ export default function StatsPage() {
   if (state.loading) {
     return (
       <div
-        className="flex h-full w-full items-center justify-center bg-[var(--map-land)] text-white"
-        style={{ backgroundColor: 'var(--map-land)' }}
+        className="flex h-full w-full items-center justify-center"
+        style={{ backgroundColor: 'var(--map-land)', color: 'var(--controls-fg)' }}
       >
-        <span className="text-sm uppercase tracking-[0.35em] text-white/70">
+        <span className="text-sm uppercase tracking-[0.35em] opacity-70">
           Loading analytics…
         </span>
       </div>
@@ -55,13 +58,16 @@ export default function StatsPage() {
   return (
     <StatsLayout>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <header className="border-b border-[color:var(--panel-border)] bg-[rgba(8,15,30,0.92)] px-6 py-4">
+        <header
+          className="border-b border-[color:var(--panel-border)] px-6 py-4"
+          style={{ backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
+        >
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <h1 className="text-sm font-semibold uppercase tracking-[0.35em] text-white/80">
+              <h1 className="text-sm font-semibold uppercase tracking-[0.35em] opacity-80">
                 Statistics
               </h1>
-              <p className="text-xs text-white/60">
+              <p className="text-xs opacity-60">
                 Overview and single-flight analysis with a clear filter bar, compact KPIs, and
                 readable charts.
               </p>
@@ -106,9 +112,12 @@ export default function StatsPage() {
         <div className="flex flex-1 min-h-0 flex-col gap-6 px-6 py-6">
           {state.filteredFlights.length === 0 ? (
             <div className="flex flex-1 items-center justify-center">
-              <div className="max-w-lg rounded-xl border border-[color:var(--panel-border)] bg-[rgba(12,20,36,0.78)] p-6 text-center text-white/80 shadow-sm">
+              <div
+                className="max-w-lg rounded-xl border border-[color:var(--panel-border)] p-6 text-center shadow-sm"
+                style={{ backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
+              >
                 <div className="text-sm font-medium">No results</div>
-                <p className="mt-2 text-[0.85rem] text-white/60">
+                <p className="mt-2 text-[0.85rem] opacity-60">
                   No flights were found for the current filter combination. Adjust the filters or
                   reset them.
                 </p>
@@ -122,7 +131,7 @@ export default function StatsPage() {
                     state.setFilterOriginCountry('all')
                     state.setFilterDestinationCountry('all')
                   }}
-                  className="mt-4 controls-btn rounded-md border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.72)] px-4 py-2 text-sm font-semibold uppercase tracking-[0.25em] text-white hover:bg-white/10"
+                  className="mt-4 controls-btn rounded-md border border-[color:var(--panel-border)] px-4 py-2 text-sm font-semibold uppercase tracking-[0.25em] hover:bg-[color:var(--panel-border)]/10"
                 >
                   Reset filters
                 </button>

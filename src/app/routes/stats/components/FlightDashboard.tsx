@@ -94,14 +94,12 @@ export function FlightDashboard({
             {selectedFlightStats ? (
               <div className="flex flex-1 flex-col justify-between gap-4 text-sm">
                 <div className="space-y-1">
-                  <div className="text-xs uppercase tracking-wide text-white/60">Countries</div>
-                  <div className="text-sm text-white/80">
+                  <div className="text-xs uppercase tracking-wide opacity-60">Countries</div>
+                  <div className="text-sm opacity-80">
                     {selectedFlightStats.originCountry} → {selectedFlightStats.destinationCountry}
                   </div>
                   {selectedFlightStats.departureLabel ? (
-                    <div className="text-xs text-white/50">
-                      {selectedFlightStats.departureLabel}
-                    </div>
+                    <div className="text-xs opacity-60">{selectedFlightStats.departureLabel}</div>
                   ) : null}
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -145,7 +143,7 @@ export function FlightDashboard({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-1 items-center justify-center text-sm text-white/50">
+              <div className="flex flex-1 items-center justify-center text-sm opacity-60">
                 No flight selected
               </div>
             )}
@@ -362,15 +360,15 @@ export function FlightDashboard({
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[0.6rem] uppercase tracking-wide text-white/50">{label}</div>
-      <div className="text-sm font-medium text-white/90">{value}</div>
+      <div className="text-[0.6rem] uppercase tracking-wide opacity-60">{label}</div>
+      <div className="text-sm font-medium opacity-90">{value}</div>
     </div>
   )
 }
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex h-full w-full items-center justify-center text-sm text-white/50">
+    <div className="flex h-full w-full items-center justify-center text-sm opacity-60">
       {message}
     </div>
   )

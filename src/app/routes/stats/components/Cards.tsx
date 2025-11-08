@@ -15,15 +15,15 @@ export function Card({ title, subtitle, children, className, style, actions }: C
   return (
     <div
       className={cn(
-        'card flex min-h-0 flex-col gap-3 rounded-xl border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.78)] p-4 text-white shadow-sm backdrop-blur',
+        'card flex min-h-0 flex-col gap-3 rounded-xl border border-[color:var(--panel-border)] p-4 shadow-sm backdrop-blur',
         className
       )}
-      style={style}
+      style={{ ...(style || {}), backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
     >
       <header className="space-y-1">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-[0.35em] text-white/90">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.35em] opacity-90">
               {title}
             </h2>
             {subtitle ? (

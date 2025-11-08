@@ -11,8 +11,6 @@ import { useTrailsOverlay, type Trip } from '../overlays/trails'
 import { useAnalyticsLayer, type AnalyticsPickingInfo } from '../overlays/analytics'
 import { useRoutesLayer, type RouteArcDatum } from '../overlays/routes'
 import { useAirportHubsLayer, type AirportHubDatum } from '../overlays/airports'
-import { useSpeedColumnsLayer, type SpeedColumnDatum } from '../overlays/speedColumns'
-import { useClimbBurstsLayer, type ClimbBurstDatum } from '../overlays/climbBursts'
 import type { OverlayId } from '../overlays/options'
 import {
   createDefaultMapFilters,
@@ -21,8 +19,19 @@ import {
   type MapFilterValues,
 } from '../types'
 import { nf0, formatKm, formatFt, formatDuration } from '@/lib/format'
-import { resolveAirportPosition, resolveAirportKey, formatAirportLabel, getCountryName } from '../lib/airports'
-import { type NormalizedFilters, normalizeText, parseDateToMs, flightMatchesFilters } from '../lib/filters'
+import {
+  resolveAirportPosition,
+  resolveAirportKey,
+  formatAirportLabel,
+  getCountryName,
+} from '../lib/airports'
+import {
+  type NormalizedFilters,
+  normalizeText,
+  parseDateToMs,
+  flightMatchesFilters,
+} from '../lib/filters'
+import type { Theme } from '@/lib/theme/useTheme'
 
 type MapWithCamera = MaplibreMap & {
   cameraForBounds?: (
@@ -39,17 +48,8 @@ const toDeg = (value: number) => (value * 180) / Math.PI
 type FlightPoint = Flight['points'][number]
 
 const MODE_SUPPORT: Record<'globe' | 'mercator', ReadonlyArray<OverlayId>> = {
-  globe: ['flights', 'trails', 'airports', 'climb-bursts'],
-  mercator: [
-    'segments',
-    'analytics',
-    'flights',
-    'trails',
-    'routes',
-    'airports',
-    'speed-columns',
-    'climb-bursts',
-  ],
+  globe: ['flights', 'trails', 'airports'],
+  mercator: ['segments', 'analytics', 'flights', 'trails', 'routes', 'airports'],
 } as const
 
 export type ProjectionMode = keyof typeof MODE_SUPPORT
@@ -59,22 +59,30 @@ type DeckWithOptionalRedraw = Deck & { setNeedsRedraw?: (reason: string) => void
 
 // helpers moved to ../lib/filters and ../lib/airports
 
-export function useMapPageState() {
+export function useMapPageState({ theme }: { theme: Theme }) {
   const [activeOverlay, setActiveOverlay] = useState<OverlayId>('trails')
-  const [analyticsMetric, setAnalyticsMetric] = useState<'alt' | 'count'>('alt')
+  const [analyticsMetric, setAnalyticsMetric] = useState<'alt' | 'speed' | 'count'>('alt')
   const [ready, setReady] = useState(false)
   const [data, setData] = useState<Awaited<ReturnType<typeof getFlightData>> | null>(null)
   const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null)
   const [hoveredFlightId, setHoveredFlightId] = useState<string | null>(null)
-  const [flightSpeedMultiplier, setFlightSpeedMultiplier] = useState(20)
+  const [flightSpeedMultiplier, setFlightSpeedMultiplier] = useState(1)
+  const [planeSizeScale, setPlaneSizeScale] = useState(1)
   const [trailSpeedMultiplier, setTrailSpeedMultiplier] = useState(2)
   const [trailLengthSeconds, setTrailLengthSeconds] = useState(30)
+  const [trailWidthScale, setTrailWidthScale] = useState(1)
+  const [trailOpacity, setTrailOpacity] = useState(0.85)
   const [segmentWidthScale, setSegmentWidthScale] = useState(1)
   const [routeWidthScale, setRouteWidthScale] = useState(1)
+  const [routeHeight, setRouteHeight] = useState(0.2)
+  const [routeOpacity, setRouteOpacity] = useState(0.9)
   const [airportSizeScale, setAirportSizeScale] = useState(1)
+  const [airportOpacity, setAirportOpacity] = useState(0.95)
   const [analyticsRadius, setAnalyticsRadius] = useState(20000)
-  const [speedColumnScale, setSpeedColumnScale] = useState(60)
-  const [verticalRateThreshold, setVerticalRateThreshold] = useState(1200)
+  const [analyticsElevationScale, setAnalyticsElevationScale] = useState(35)
+  const [analyticsOpacity, setAnalyticsOpacity] = useState(0.95)
+  const [isMotionPaused, setIsMotionPaused] = useState(false)
+  // removed speed columns / climb bursts settings
   const [projectionMode, setProjectionMode] = useState<ProjectionMode>('globe')
   const [activeControlPanel, setActiveControlPanel] = useState<'layers' | 'settings' | null>(null)
   const [pendingOverlay, setPendingOverlay] = useState<OverlayId | null>(null)
@@ -89,6 +97,7 @@ export function useMapPageState() {
   })
   const hasFitBoundsRef = useRef(false)
   const closeControlPanels = useCallback(() => setActiveControlPanel(null), [])
+  const toggleMotionPaused = useCallback(() => setIsMotionPaused((prev) => !prev), [])
 
   const hasActiveFilters = useMemo(
     () => Object.values(mapFilters).some((value) => value.trim().length > 0),
@@ -205,8 +214,8 @@ export function useMapPageState() {
   const isAnalytics = activeOverlay === 'analytics'
   const isRoutes = activeOverlay === 'routes'
   const isAirports = activeOverlay === 'airports'
-  const isSpeedColumns = activeOverlay === 'speed-columns'
-  const isClimbBursts = activeOverlay === 'climb-bursts'
+  const isSpeedColumns = false
+  const isClimbBursts = false
 
   useEffect(() => {
     getFlightData().then((d) => {
@@ -496,11 +505,11 @@ export function useMapPageState() {
 
   useEffect(() => {
     if (activeOverlay === 'trails') {
-      setTrailSpeedMultiplier(2)
+      setTrailSpeedMultiplier(1)
       setTrailLengthSeconds(30)
     }
     if (activeOverlay === 'flights') {
-      setFlightSpeedMultiplier(20)
+      setFlightSpeedMultiplier(1)
     }
   }, [activeOverlay])
 
@@ -592,6 +601,9 @@ export function useMapPageState() {
     speedMultiplier: flightSpeedMultiplier,
     projectionMode,
     zoom: mapZoom,
+    planeScale: planeSizeScale,
+    theme,
+    isPaused: isMotionPaused,
   })
 
   const trips = useMemo<Trip[]>(() => {
@@ -615,13 +627,30 @@ export function useMapPageState() {
     isActive: isTrails,
     speedMultiplier: trailSpeedMultiplier,
     trailLengthSeconds,
+    widthScale: trailWidthScale,
+    opacity: trailOpacity,
+    isPaused: isMotionPaused,
+    theme,
   })
 
   const analyticsPoints = useMemo(() => {
-    const list: Array<{ position: [number, number]; altitude: number }> = []
+    const list: Array<{
+      position: [number, number]
+      altitudeFt: number
+      speedKmh: number | null
+      flightId: string
+    }> = []
     for (const f of visibleFlights) {
       for (const p of f.points) {
-        list.push({ position: [p.position[0], p.position[1]], altitude: p.altitudeFeet ?? 0 })
+        const speedKmh = Number.isFinite(p.speedKts as number)
+          ? Math.round((p.speedKts as number) * 1.852)
+          : null
+        list.push({
+          position: [p.position[0], p.position[1]],
+          altitudeFt: p.altitudeFeet ?? 0,
+          speedKmh,
+          flightId: f.id,
+        })
       }
     }
     return list
@@ -632,73 +661,11 @@ export function useMapPageState() {
     isActive: isAnalytics,
     metric: analyticsMetric,
     radius: analyticsRadius,
+    elevationScale: analyticsElevationScale,
+    opacity: analyticsOpacity,
   })
 
-  const speedColumnSamples = useMemo<SpeedColumnDatum[]>(() => {
-    if (!visibleFlights.length) return []
-    const samples: SpeedColumnDatum[] = []
-    for (const flight of visibleFlights) {
-      const pts = flight.points
-      if (!pts.length) continue
-      const step = Math.max(1, Math.floor(pts.length / 30))
-      for (let i = 0; i < pts.length; i += step) {
-        const point = pts[i]
-        const speed = Number.isFinite(point.speedKts as number) ? (point.speedKts as number) : null
-        if (speed == null) continue
-        samples.push({
-          id: `${flight.id}-${i}`,
-          position: [point.position[0], point.position[1]],
-          speedKts: speed,
-          altitudeFt: Number.isFinite(point.altitudeFeet as number)
-            ? (point.altitudeFeet as number)
-            : null,
-          flightName: flight.name,
-        })
-      }
-    }
-    return samples
-  }, [visibleFlights])
-
-  const speedColumnsLayer = useSpeedColumnsLayer({
-    samples: speedColumnSamples,
-    isActive: isSpeedColumns,
-    elevationScale: speedColumnScale,
-  })
-
-  const climbBurstSamples = useMemo<ClimbBurstDatum[]>(() => {
-    if (!visibleFlights.length) return []
-    const bursts: ClimbBurstDatum[] = []
-    const threshold = Math.max(0, verticalRateThreshold)
-    for (const flight of visibleFlights) {
-      const pts = flight.points
-      if (!pts.length) continue
-      const step = Math.max(1, Math.floor(pts.length / 45))
-      for (let i = 0; i < pts.length; i += step) {
-        const point = pts[i]
-        const rate = Number.isFinite(point.verticalRateFpm as number)
-          ? (point.verticalRateFpm as number)
-          : null
-        if (rate == null || Math.abs(rate) < threshold) continue
-        bursts.push({
-          id: `${flight.id}-${i}`,
-          position: [point.position[0], point.position[1]],
-          verticalRateFpm: rate,
-          altitudeFt: Number.isFinite(point.altitudeFeet as number)
-            ? (point.altitudeFeet as number)
-            : null,
-          speedKts: Number.isFinite(point.speedKts as number) ? (point.speedKts as number) : null,
-          flightName: flight.name,
-        })
-      }
-    }
-    return bursts
-  }, [visibleFlights, verticalRateThreshold])
-
-  const climbBurstsLayer = useClimbBurstsLayer({
-    samples: climbBurstSamples,
-    isActive: isClimbBursts,
-    minMagnitude: verticalRateThreshold,
-  })
+  // removed speed columns and climb bursts layers
 
   const routeArcs = useMemo<RouteArcDatum[]>(() => {
     const arcs: RouteArcDatum[] = []
@@ -799,6 +766,9 @@ export function useMapPageState() {
     routes: routeArcs,
     isActive: isRoutes,
     widthScale: routeWidthScale,
+    height: routeHeight,
+    opacity: routeOpacity,
+    theme,
   })
 
   const airportLayer = useAirportHubsLayer({
@@ -806,6 +776,8 @@ export function useMapPageState() {
     isActive: isAirports,
     zoom: mapZoom,
     sizeScale: airportSizeScale,
+    opacity: airportOpacity,
+    theme,
   })
 
   const segmentsLayer = useSegmentsLayer({
@@ -815,6 +787,7 @@ export function useMapPageState() {
     hoveredFlightId,
     altitudeScale,
     widthScale: segmentWidthScale,
+    theme,
   })
 
   const layers = useMemo(() => {
@@ -823,21 +796,11 @@ export function useMapPageState() {
     if (flightsLayer) out.push(flightsLayer)
     if (trailLayers.length) out.push(...trailLayers)
     if (analyticsLayer) out.push(analyticsLayer)
-    if (speedColumnsLayer) out.push(speedColumnsLayer)
-    if (climbBurstsLayer) out.push(climbBurstsLayer)
+    // speed columns / climb bursts removed
     if (routesLayer) out.push(routesLayer)
     if (airportLayer) out.push(airportLayer)
     return out
-  }, [
-    segmentsLayer,
-    flightsLayer,
-    trailLayers,
-    analyticsLayer,
-    speedColumnsLayer,
-    climbBurstsLayer,
-    routesLayer,
-    airportLayer,
-  ])
+  }, [segmentsLayer, flightsLayer, trailLayers, analyticsLayer, routesLayer, airportLayer])
 
   // formatters moved to src/lib/format
 
@@ -861,20 +824,35 @@ export function useMapPageState() {
         return (object as Trip)?.id ?? null
       }
       if (isAnalytics) {
-        const bin = object as AnalyticsPickingInfo
-        return analyticsMetric === 'alt'
-          ? `Avg altitude: ${nf0.format(Math.round(bin.elevationValue))} ft\nSamples: ${bin.colorValue}`
-          : `Count: ${bin.colorValue}`
+        const bin = object as AnalyticsPickingInfo & { points?: any[] }
+        if (analyticsMetric === 'alt') {
+          const samples = Array.isArray(bin.points) ? bin.points.length : undefined
+          const lines = [`Avg altitude: ${nf0.format(Math.round(bin.elevationValue))} ft`]
+          if (typeof samples === 'number') lines.push(`Samples: ${nf0.format(samples)}`)
+          return lines.join('\n')
+        }
+        if (analyticsMetric === 'speed') {
+          // Show exactly the aggregated value used for color/height
+          const kmh = Math.max(0, Math.min(1200, Math.round(bin.colorValue)))
+          return `Avg speed: ${nf0.format(kmh)} km/h`
+        }
+        // Count: compute unique flight IDs from bin.points to be robust
+        let unique = 0
+        if (Array.isArray((bin as any).points)) {
+          const items = (bin as any).points.map((p: any) => (p && p.source ? p.source : p))
+          const ids = new Set<string>()
+          for (const it of items) {
+            const id = it?.flightId
+            if (typeof id === 'string' && id) ids.add(id)
+          }
+          unique = ids.size
+        } else {
+          // fallback to aggregated value
+          unique = Math.max(0, Math.trunc(bin.colorValue))
+        }
+        return `Flights: ${unique}`
       }
-      if (isSpeedColumns) {
-        const column = object as SpeedColumnDatum
-        const speedText = `Speed: ${nf0.format(Math.round(column.speedKts))} kt`
-        const altitudeText =
-          Number.isFinite(column.altitudeFt as number) && column.altitudeFt
-            ? `Altitude: ${nf0.format(Math.round(column.altitudeFt))} ft`
-            : null
-        return [column.flightName, speedText, altitudeText].filter(Boolean).join('\n')
-      }
+      // speed columns removed
       if (isRoutes) {
         const arc = object as RouteArcDatum
         const routeLabel =
@@ -906,20 +884,7 @@ export function useMapPageState() {
             : null
         return [title, location, flightsText, altitudeText].filter(Boolean).join('\n')
       }
-      if (isClimbBursts) {
-        const burst = object as ClimbBurstDatum
-        const direction = burst.verticalRateFpm >= 0 ? 'Climb' : 'Descent'
-        const rateText = `${direction}: ${nf0.format(Math.abs(Math.round(burst.verticalRateFpm)))} fpm`
-        const altitudeText =
-          Number.isFinite(burst.altitudeFt as number) && burst.altitudeFt
-            ? `Altitude: ${nf0.format(Math.round(burst.altitudeFt))} ft`
-            : null
-        const speedText =
-          Number.isFinite(burst.speedKts as number) && burst.speedKts
-            ? `Speed: ${nf0.format(Math.round(burst.speedKts))} kt`
-            : null
-        return [burst.flightName, rateText, altitudeText, speedText].filter(Boolean).join('\n')
-      }
+      // climb bursts removed
       return null
     },
     [
@@ -974,9 +939,9 @@ export function useMapPageState() {
     : null
 
   const handleMapLoad = useCallback(() => {
+    // Mark map ready; projection is applied by effect on first ready=true
     setReady(true)
-    applyProjection(projectionMode)
-  }, [applyProjection, projectionMode])
+  }, [])
 
   const handleMapMove = useCallback((viewState: { zoom?: number }) => {
     if (typeof viewState.zoom === 'number') {
@@ -989,7 +954,7 @@ export function useMapPageState() {
   }, [projectionMode, switchProjectionMode])
 
   const toggleAnalyticsMetric = useCallback(() => {
-    setAnalyticsMetric((m) => (m === 'alt' ? 'count' : 'alt'))
+    setAnalyticsMetric((m) => (m === 'alt' ? 'speed' : m === 'speed' ? 'count' : 'alt'))
   }, [])
 
   const resetView = useCallback(() => {
@@ -1034,8 +999,7 @@ export function useMapPageState() {
         }
       }
 
-      const targetPitch =
-        projectionMode === 'mercator' ? Math.max(mapInstance.getPitch(), 35) : 0
+      const targetPitch = projectionMode === 'mercator' ? Math.max(mapInstance.getPitch(), 35) : 0
       const targetBearing = projectionMode === 'mercator' ? mapInstance.getBearing() : 0
 
       mapInstance.flyTo({
@@ -1079,6 +1043,7 @@ export function useMapPageState() {
     isAirports,
     isSpeedColumns,
     isClimbBursts,
+    isMotionPaused,
     settingsOpen,
     layersOpen,
     toggleSettingsPanel,
@@ -1088,25 +1053,39 @@ export function useMapPageState() {
     handleMapMove,
     toggleProjection,
     toggleAnalyticsMetric,
+    setAnalyticsMetric,
     analyticsMetric,
     flightSpeedMultiplier,
     setFlightSpeedMultiplier,
+    planeSizeScale,
+    setPlaneSizeScale,
     trailSpeedMultiplier,
     setTrailSpeedMultiplier,
     trailLengthSeconds,
     setTrailLengthSeconds,
+    trailWidthScale,
+    setTrailWidthScale,
+    trailOpacity,
+    setTrailOpacity,
     segmentWidthScale,
     setSegmentWidthScale,
     routeWidthScale,
     setRouteWidthScale,
+    routeHeight,
+    setRouteHeight,
+    routeOpacity,
+    setRouteOpacity,
     airportSizeScale,
     setAirportSizeScale,
+    airportOpacity,
+    setAirportOpacity,
     analyticsRadius,
     setAnalyticsRadius,
-    speedColumnScale,
-    setSpeedColumnScale,
-    verticalRateThreshold,
-    setVerticalRateThreshold,
+    analyticsElevationScale,
+    setAnalyticsElevationScale,
+    analyticsOpacity,
+    setAnalyticsOpacity,
+    // removed speed columns / climb bursts settings from public API
     selectedFlight,
     chartData,
     clearSelectedFlight: () => setSelectedFlightId(null),
@@ -1116,6 +1095,7 @@ export function useMapPageState() {
     resetView,
     focusOnLocation,
     closeControlPanels,
+    toggleMotionPaused,
     mapFilters,
     updateMapFilter,
     applyMapFilters,

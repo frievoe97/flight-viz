@@ -13,7 +13,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 const inputBase =
-  'w-full rounded-md border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.6)] px-2 py-1.5 text-sm text-white placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[rgba(56,189,248,0.45)]'
+  'w-full rounded-md border border-[color:var(--panel-border)] px-2 py-1.5 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[rgba(56,189,248,0.45)]'
 
 // ========================= MultiSelect Suggestion Input =========================
 
@@ -179,6 +179,7 @@ function MultiSelectInput({
         {/* Control */}
         <div
           className={`${inputBase} flex min-h-[2.375rem] items-center gap-1 pr-8 pl-2`}
+          style={{ backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
           onClick={() => {
             inputRef.current?.focus()
             setOpen(true)
@@ -189,13 +190,13 @@ function MultiSelectInput({
             {sel.map((val) => (
               <span
                 key={val}
-                className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-xs"
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-[color:var(--panel-border)]/15"
               >
                 {suggestions.find((s) => s.value === val)?.label ?? val}
                 <button
                   type="button"
                   aria-label={`Remove ${val}`}
-                  className="rounded hover:bg-white/20"
+                  className="rounded hover:bg-[color:var(--panel-border)]/25"
                   onClick={(e) => {
                     e.stopPropagation()
                     onChange(sel.filter((x) => x !== val))
@@ -220,7 +221,7 @@ function MultiSelectInput({
               placeholder={sel.length ? '' : placeholder}
               autoComplete="off"
               className="flex-1 min-w-[6ch] bg-transparent outline-none placeholder:text-[hsl(var(--muted-foreground))]"
-            />
+              />
           </div>
 
           {/* Clear-all X icon */}
@@ -228,7 +229,7 @@ function MultiSelectInput({
             type="button"
             title="Clear"
             aria-label="Clear"
-            className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-white/80 hover:bg-white/10"
+            className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 opacity-80 hover:bg-[color:var(--panel-border)]/10"
             onClick={(e) => {
               e.stopPropagation()
               clearAll()
@@ -241,11 +242,12 @@ function MultiSelectInput({
         {/* Dropdown */}
         {open && options.length > 0 && (
           <div
-            className={`absolute left-0 right-0 z-50 rounded-md border border-[color:var(--panel-border)] bg-[#0f172a]/95 text-sm text-white shadow-lg backdrop-blur-md ${
+            className={`absolute left-0 right-0 z-50 rounded-md border border-[color:var(--panel-border)] text-sm shadow-lg backdrop-blur-md ${
               placement === 'bottom' ? 'mt-1 top-full' : 'mb-1 bottom-full'
             }`}
             role="listbox"
             aria-label={ariaLabel}
+            style={{ backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
           >
             <ul ref={listRef} className="overflow-y-auto py-1" style={{ maxHeight: panelMaxH }}>
               {options.map((opt, idx) => (
@@ -255,8 +257,8 @@ function MultiSelectInput({
                     data-idx={idx}
                     role="option"
                     aria-selected={idx === activeIndex}
-                    className={`flex w-full items-center px-3 py-2 text-left hover:bg-white/10 focus:bg-white/10 ${
-                      idx === activeIndex ? 'bg-white/10' : ''
+                    className={`flex w-full items-center px-3 py-2 text-left hover:bg-[color:var(--panel-border)]/10 focus:bg-[color:var(--panel-border)]/10 ${
+                      idx === activeIndex ? 'bg-[color:var(--panel-border)]/10' : ''
                     }`}
                     onMouseEnter={() => setActiveIndex(idx)}
                     onMouseDown={(e) => e.preventDefault()} // keep input focus
@@ -305,8 +307,8 @@ export default function FilterMenu({
 }: FilterMenuProps) {
   return (
     <div
-      className="w-lg space-y-4 rounded-lg border bg-[#0f172a]/92 p-4 text-sm text-white shadow-lg backdrop-blur-md"
-      style={{ borderColor: 'var(--panel-border)' }}
+      className="w-lg space-y-4 rounded-lg border p-4 text-sm shadow-lg backdrop-blur-md"
+      style={{ borderColor: 'var(--panel-border)', backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
     >
       <div className="space-y-3">
         <span className="text-[0.8rem] uppercase text-[hsl(var(--muted-foreground))]">

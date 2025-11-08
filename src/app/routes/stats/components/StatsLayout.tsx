@@ -10,8 +10,8 @@ type StatsLayoutProps = {
 export function StatsLayout({ sidebar, children, className }: StatsLayoutProps) {
   return (
     <div
-      className={cn('flex h-full w-full bg-[var(--map-water)] text-white', className)}
-      style={{ backgroundColor: 'var(--map-land)' }}
+      className={cn('flex h-full w-full', className)}
+      style={{ backgroundColor: 'var(--map-land)', color: 'var(--controls-fg)' }}
     >
       <div className={cn('flex h-full w-full', sidebar ? 'flex-col md:flex-row' : 'flex-col')}>
         {sidebar ? sidebar : null}

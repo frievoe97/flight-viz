@@ -20,13 +20,15 @@
   --ring: 215 20.2% 65.1%;
   --radius: 0.5rem;
 
-  /* Map and UI theme tokens */
-  --map-water: #2c353c;
-  --map-land: #0e0e0e;
-  --panel-border: #39424a; /* slightly lighter than water */
-  --panel-bg: #2c353c;
-  --chart-axis: #6b7280; /* muted gray for ticks/labels */
-  --chart-grid: #6b728033; /* 20% opacity */
+  /* Map and UI theme tokens (light by default) */
+  --map-water: #e6f0f8;
+  --map-land: #f8fafc;
+  --panel-border: #e2e8f0; /* slate-200 */
+  --panel-bg: #ffffff;
+  --controls-fg: #0f172a; /* slate-900 */
+  --controls-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  --chart-axis: #64748b; /* slate-500 */
+  --chart-grid: #64748b33; /* 20% opacity */
   --flight-altitude: #a855f7; /* purple */
   --flight-speed: #38bdf8; /* sky */
 }
@@ -51,12 +53,22 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
   --ring: 217.2 32.6% 17.5%;
+
+  /* Dark overrides */
+  --map-water: #2c353c;
+  --map-land: #0e0e0e;
+  --panel-border: #39424a;
+  --panel-bg: #2c353c;
+  --controls-fg: #ffffff;
+  --controls-shadow: 0 6px 18px rgba(15, 23, 42, 0.45);
+  --chart-axis: #6b7280;
+  --chart-grid: #6b728033;
 }
 
 /* Thematic utilities to avoid inline styles */
 .panel {
   background-color: var(--map-land);
-  color: #ffffff;
+  color: var(--controls-fg);
   border: 1px solid var(--panel-border);
 }
 .card {
@@ -67,14 +79,15 @@
 .controls-btn {
   background-color: var(--panel-bg);
   border: 1px solid var(--panel-border);
-  color: #ffffff;
+  color: var(--controls-fg);
+  box-shadow: var(--controls-shadow);
 }
 
 /* MapLibre UI tweaks */
 .maplibregl-ctrl-group {
   background-color: var(--panel-bg) !important;
   border: 1px solid var(--panel-border) !important;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.45) !important;
+  box-shadow: var(--controls-shadow) !important;
   border-radius: 9999px !important;
   overflow: hidden;
 }
@@ -82,7 +95,7 @@
 .maplibregl-ctrl-group button {
   background-color: transparent !important;
   border: none !important;
-  color: #ffffff !important;
+  color: var(--controls-fg) !important;
 }
 
 .maplibregl-ctrl-group button + button {
@@ -90,5 +103,18 @@
 }
 
 .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: none;
+}
+
+.dark .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
   filter: invert(1) grayscale(1);
+}
+
+/* deck.gl tooltip theme */
+.deck-tooltip {
+  background: var(--panel-bg) !important;
+  color: var(--controls-fg) !important;
+  border: 1px solid var(--panel-border) !important;
+  box-shadow: var(--controls-shadow) !important;
+  border-radius: 0.75rem !important;
 }

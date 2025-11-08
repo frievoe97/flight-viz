@@ -3,10 +3,12 @@ import MapGL, { Marker, NavigationControl } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import * as maplibregl from 'maplibre-gl'
 import { useNavigate } from 'react-router-dom'
-import { MAP_STYLE } from '@/lib/map/deckConfig'
+import { MAP_STYLES } from '@/lib/map/deckConfig'
 import MapSettings from './components/MapSettings'
 import ProjectionToggle from './components/ProjectionToggle'
 import LocationSearch, { type LocationSearchHandle } from './components/LocationSearch'
+import ThemeToggle from '@/app/components/ThemeToggle'
+import { useTheme } from '@/lib/theme/useTheme'
 import StatsShortcut from './components/StatsShortcut'
 import FlightDetailsPanel from './components/FlightDetailsPanel'
 import FilterMenu from './components/FilterMenu'
@@ -23,6 +25,9 @@ export default function MapPage() {
   const controlPanelRef = useRef<HTMLDivElement | null>(null)
   const filterPanelRef = useRef<HTMLDivElement | null>(null)
   const locationSearchRef = useRef<LocationSearchHandle | null>(null)
+  // Theme awareness for map style
+  const { theme } = useTheme()
+
   const {
     data,
     mapRef,
@@ -36,6 +41,7 @@ export default function MapPage() {
     isAirports,
     isSpeedColumns,
     isClimbBursts,
+    isMotionPaused,
     settingsOpen,
     layersOpen,
     toggleSettingsPanel,
@@ -44,26 +50,39 @@ export default function MapPage() {
     handleMapLoad,
     handleMapMove,
     toggleProjection,
-    toggleAnalyticsMetric,
+    // toggleAnalyticsMetric,
+    setAnalyticsMetric,
     analyticsMetric,
     flightSpeedMultiplier,
     setFlightSpeedMultiplier,
+    planeSizeScale,
+    setPlaneSizeScale,
     trailSpeedMultiplier,
     setTrailSpeedMultiplier,
     trailLengthSeconds,
     setTrailLengthSeconds,
+    trailWidthScale,
+    setTrailWidthScale,
+    trailOpacity,
+    setTrailOpacity,
     segmentWidthScale,
     setSegmentWidthScale,
     routeWidthScale,
     setRouteWidthScale,
+    routeHeight,
+    setRouteHeight,
+    routeOpacity,
+    setRouteOpacity,
     airportSizeScale,
     setAirportSizeScale,
+    airportOpacity,
+    setAirportOpacity,
     analyticsRadius,
     setAnalyticsRadius,
-    speedColumnScale,
-    setSpeedColumnScale,
-    verticalRateThreshold,
-    setVerticalRateThreshold,
+    analyticsElevationScale,
+    setAnalyticsElevationScale,
+    analyticsOpacity,
+    setAnalyticsOpacity,
     selectedFlight,
     chartData,
     clearSelectedFlight,
@@ -73,13 +92,14 @@ export default function MapPage() {
     resetView,
     focusOnLocation,
     closeControlPanels,
+    toggleMotionPaused,
     mapFilters,
     applyMapFilters,
     resetMapFilters,
     airportSuggestions,
     countrySuggestions,
     hasActiveFilters,
-  } = useMapPageState()
+  } = useMapPageState({ theme })
 
   const [pendingFilters, setPendingFilters] = useState<MapFilterValues>(mapFilters)
 
@@ -239,6 +259,39 @@ export default function MapPage() {
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [layersOpen, settingsOpen, filtersOpen, closeControlPanels])
 
+  useEffect(() => {
+    const nativeMap = mapRef.current?.getMap?.()
+    if (!nativeMap) return
+    if (typeof nativeMap.setSky !== 'function') return
+
+    const isGlobe = projectionMode === 'globe'
+    const spaceColor = theme === 'light' ? '#0f172a' : '#01030b'
+    const haloColor = theme === 'light' ? '#bae6fd' : '#1f2937'
+    const atmosphereColor = theme === 'light' ? '#bfdbfe' : '#0b1f3a'
+
+    nativeMap.setSky({
+      type: 'sky',
+      paint: {
+        'sky-type': 'atmosphere',
+        'sky-atmosphere-color': atmosphereColor,
+        'sky-atmosphere-halo-color': haloColor,
+        'sky-atmosphere-sun': [1.5, 90],
+        'sky-atmosphere-sun-intensity': isGlobe ? 12 : 0,
+        'sky-color': spaceColor,
+        'sky-opacity': isGlobe ? 1 : 0,
+      },
+    } as maplibregl.SkyLayerSpecification)
+
+    if (typeof nativeMap.setLight === 'function') {
+      nativeMap.setLight({
+        anchor: 'map',
+        position: [1.5, 90, 80],
+        intensity: isGlobe ? 0.7 : 0.2,
+        color: theme === 'light' ? '#fff7ed' : '#f8fafc',
+      })
+    }
+  }, [projectionMode, theme, mapRef])
+
   if (!data) return <div className="h-full w-full" />
 
   const gridTemplateRows =
@@ -250,10 +303,12 @@ export default function MapPage() {
         <MapGL
           ref={mapRef}
           mapLib={maplibregl}
-          mapStyle={MAP_STYLE}
+          mapStyle={theme === 'light' ? MAP_STYLES.light : MAP_STYLES.dark}
           attributionControl={false}
           projection={projectionMode}
           maxPitch={projectionMode === 'globe' ? 0 : 85}
+          dragRotate={projectionMode !== 'globe'}
+          touchPitch={projectionMode !== 'globe'}
           initialViewState={{
             latitude: data.INITIAL_VIEW_STATE.latitude,
             longitude: data.INITIAL_VIEW_STATE.longitude,
@@ -264,7 +319,7 @@ export default function MapPage() {
           }}
           onLoad={handleMapLoad}
           onMove={({ viewState }) => handleMapMove(viewState)}
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: '100%', height: '100%', position: 'relative', zIndex: 1 }}
         >
           <NavigationControl
             key={projectionMode}
@@ -299,6 +354,7 @@ export default function MapPage() {
         <div className="absolute top-3 left-3 z-10 flex items-start gap-2">
           <ProjectionToggle projectionMode={projectionMode} onToggle={toggleProjection} />
           <LocationSearch ref={locationSearchRef} onSelect={handleLocationSelect} />
+          <ThemeToggle />
         </div>
 
         <div
@@ -307,8 +363,8 @@ export default function MapPage() {
         >
           <button
             type="button"
-            className="controls-btn flex items-center gap-2 rounded-full px-2 py-2 text-xs font-semibold uppercase tracking-wide text-white [box-shadow:rgba(15,23,42,0.45)_0px_6px_18px]"
-            style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)' }}
+            className="controls-btn flex items-center gap-2 rounded-full px-2 py-2 text-xs font-semibold uppercase tracking-wide"
+            style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)', boxShadow: 'var(--controls-shadow)' }}
             onClick={resetView}
           >
             <RotateCcw className="h-4 w-4" aria-hidden />
@@ -335,13 +391,13 @@ export default function MapPage() {
             <StatsShortcut onClick={() => navigate('/stats')} />
             <button
               type="button"
-              className="controls-btn rounded-full p-2 text-white [box-shadow:rgba(15,23,42,0.45)_0px_6px_18px]"
-              style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)' }}
-              onClick={() => setFiltersOpen((prev) => !prev)}
-              aria-expanded={filtersOpen}
-              aria-label={filtersOpen ? 'Hide filters' : 'Show filters'}
-              title="Filters"
-            >
+            className="controls-btn rounded-full p-2"
+            style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--panel-border)', boxShadow: 'var(--controls-shadow)' }}
+            onClick={() => setFiltersOpen((prev) => !prev)}
+            aria-expanded={filtersOpen}
+            aria-label={filtersOpen ? 'Hide filters' : 'Show filters'}
+            title="Filters"
+          >
               <Filter
                 className="h-5 w-5"
                 aria-hidden
@@ -367,26 +423,40 @@ export default function MapPage() {
             isAirports={isAirports}
             isSpeedColumns={isSpeedColumns}
             isClimbBursts={isClimbBursts}
+            isMotionPaused={isMotionPaused}
             flightSpeedMultiplier={flightSpeedMultiplier}
             onFlightSpeedChange={(value) => setFlightSpeedMultiplier(value)}
+            planeSizeScale={planeSizeScale}
+            onPlaneSizeChange={(value) => setPlaneSizeScale(value)}
             trailSpeedMultiplier={trailSpeedMultiplier}
             onTrailSpeedChange={(value) => setTrailSpeedMultiplier(value)}
             trailLengthSeconds={trailLengthSeconds}
             onTrailLengthChange={(value) => setTrailLengthSeconds(value)}
+            trailWidthScale={trailWidthScale}
+            onTrailWidthChange={(value) => setTrailWidthScale(value)}
+            trailOpacity={trailOpacity}
+            onTrailOpacityChange={(value) => setTrailOpacity(value)}
             segmentWidthScale={segmentWidthScale}
             onSegmentWidthChange={(value) => setSegmentWidthScale(value)}
             routeWidthScale={routeWidthScale}
             onRouteWidthChange={(value) => setRouteWidthScale(value)}
+            routeHeight={routeHeight}
+            onRouteHeightChange={(value) => setRouteHeight(value)}
+            routeOpacity={routeOpacity}
+            onRouteOpacityChange={(value) => setRouteOpacity(value)}
             airportSizeScale={airportSizeScale}
             onAirportSizeChange={(value) => setAirportSizeScale(value)}
+            airportOpacity={airportOpacity}
+            onAirportOpacityChange={(value) => setAirportOpacity(value)}
             analyticsRadius={analyticsRadius}
             onAnalyticsRadiusChange={(value) => setAnalyticsRadius(value)}
-            speedColumnScale={speedColumnScale}
-            onSpeedColumnScaleChange={(value) => setSpeedColumnScale(value)}
-            verticalRateThreshold={verticalRateThreshold}
-            onVerticalRateThresholdChange={(value) => setVerticalRateThreshold(value)}
+            analyticsElevationScale={analyticsElevationScale}
+            onAnalyticsElevationScaleChange={(value) => setAnalyticsElevationScale(value)}
+            analyticsOpacity={analyticsOpacity}
+            onAnalyticsOpacityChange={(value) => setAnalyticsOpacity(value)}
             analyticsMetric={analyticsMetric}
-            onAnalyticsMetricToggle={toggleAnalyticsMetric}
+            onAnalyticsMetricChange={(m) => setAnalyticsMetric(m)}
+            onToggleMotionPaused={toggleMotionPaused}
           />
         </div>
       </div>

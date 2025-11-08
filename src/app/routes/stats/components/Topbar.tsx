@@ -69,9 +69,10 @@ export default function Topbar({
   return (
     <div
       className={cn(
-        'rounded-xl border border-[color:var(--panel-border)] bg-[rgba(12,20,36,0.78)] p-3 text-white shadow-sm backdrop-blur',
+        'rounded-xl border border-[color:var(--panel-border)] p-3 shadow-sm',
         className
       )}
+      style={{ backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
     >
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
@@ -93,7 +94,7 @@ export default function Topbar({
             ]}
           />
           {showFilters ? (
-            <div className="hidden md:block text-xs text-white/60">{counterText}</div>
+            <div className="hidden md:block text-xs opacity-60">{counterText}</div>
           ) : null}
         </div>
 
@@ -102,7 +103,7 @@ export default function Topbar({
             <button
               type="button"
               onClick={onResetFilters}
-              className="controls-btn inline-flex items-center gap-2 rounded-md border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.65)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white hover:bg-white/10"
+              className="controls-btn inline-flex items-center gap-2 rounded-md border border-[color:var(--panel-border)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] hover:bg-[color:var(--panel-border)]/10"
             >
               <FilterX className="h-4 w-4" aria-hidden />
               <span>Reset filters</span>
@@ -180,7 +181,10 @@ export function SegmentedControl<T extends string>({
   options: Array<{ value: T; label: string; icon?: React.ReactNode }>
 }) {
   return (
-    <div className="inline-flex items-center rounded-lg border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.65)] p-1 text-xs">
+    <div
+      className="inline-flex items-center rounded-lg border border-[color:var(--panel-border)] p-1 text-xs"
+      style={{ backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
+    >
       {options.map((opt) => {
         const active = value === opt.value
         return (
@@ -191,7 +195,9 @@ export function SegmentedControl<T extends string>({
             aria-pressed={active}
             className={cn(
               'px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5',
-              active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5'
+              active
+                ? 'bg-[color:var(--panel-border)]/20'
+                : 'opacity-70 hover:bg-[color:var(--panel-border)]/10'
             )}
           >
             {opt.icon ? opt.icon : null}
