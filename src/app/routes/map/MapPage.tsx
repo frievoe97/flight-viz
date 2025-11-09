@@ -22,6 +22,7 @@ export default function MapPage() {
   const [searchHighlight, setSearchHighlight] = useState<{ position: [number, number] } | null>(
     null
   )
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const controlPanelRef = useRef<HTMLDivElement | null>(null)
   const filterPanelRef = useRef<HTMLDivElement | null>(null)
   const locationSearchRef = useRef<LocationSearchHandle | null>(null)
@@ -73,6 +74,8 @@ export default function MapPage() {
     setRouteHeight,
     routeOpacity,
     setRouteOpacity,
+    routeAnimate,
+    setRouteAnimate,
     airportSizeScale,
     setAirportSizeScale,
     airportOpacity,
@@ -102,6 +105,8 @@ export default function MapPage() {
   } = useMapPageState({ theme })
 
   const [pendingFilters, setPendingFilters] = useState<MapFilterValues>(mapFilters)
+  const [controlsVisible, setControlsVisible] = useState(true)
+  const inactivityTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     setPendingFilters(mapFilters)
@@ -171,6 +176,61 @@ export default function MapPage() {
     const timeout = window.setTimeout(() => setSearchHighlight(null), 5000)
     return () => window.clearTimeout(timeout)
   }, [searchHighlight])
+
+  // Map controls auto-hide after inactivity with fade
+  const clearInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current != null) {
+      window.clearTimeout(inactivityTimerRef.current)
+      inactivityTimerRef.current = null
+    }
+  }, [])
+
+  const startInactivityTimer = useCallback(() => {
+    clearInactivityTimer()
+    inactivityTimerRef.current = window.setTimeout(() => {
+      // Only hide when no panels/filters are open
+      if (!settingsOpen && !layersOpen && !filtersOpen) {
+        setControlsVisible(false)
+      }
+    }, 5000)
+  }, [clearInactivityTimer, settingsOpen, layersOpen, filtersOpen])
+
+  const handleUserActivity = useCallback(() => {
+    if (!controlsVisible) setControlsVisible(true)
+    startInactivityTimer()
+  }, [controlsVisible, startInactivityTimer])
+
+  useEffect(() => {
+    // Start timer on mount
+    startInactivityTimer()
+    return () => clearInactivityTimer()
+  }, [startInactivityTimer, clearInactivityTimer])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const onPointerDown = () => handleUserActivity()
+    const onPointerMove = () => handleUserActivity()
+    const onWheel = () => handleUserActivity()
+    el.addEventListener('pointerdown', onPointerDown)
+    el.addEventListener('pointermove', onPointerMove)
+    el.addEventListener('wheel', onWheel)
+    return () => {
+      el.removeEventListener('pointerdown', onPointerDown)
+      el.removeEventListener('pointermove', onPointerMove)
+      el.removeEventListener('wheel', onWheel)
+    }
+  }, [handleUserActivity])
+
+  // Keep controls visible while panels/filters are open
+  useEffect(() => {
+    if (settingsOpen || layersOpen || filtersOpen) {
+      setControlsVisible(true)
+      clearInactivityTimer()
+    } else {
+      startInactivityTimer()
+    }
+  }, [settingsOpen, layersOpen, filtersOpen, startInactivityTimer, clearInactivityTimer])
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -292,6 +352,12 @@ export default function MapPage() {
     }
   }, [projectionMode, theme, mapRef])
 
+  const fadeStyle = useMemo<React.CSSProperties>(() => ({
+    opacity: controlsVisible ? 1 : 0,
+    transition: 'opacity 300ms ease',
+    pointerEvents: controlsVisible ? 'auto' : 'none',
+  }), [controlsVisible])
+
   if (!data) return <div className="h-full w-full" />
 
   const gridTemplateRows =
@@ -299,7 +365,7 @@ export default function MapPage() {
 
   return (
     <div className="h-full w-full grid" style={{ gridTemplateColumns: '1fr', gridTemplateRows }}>
-      <div className="relative" style={{ backgroundColor: 'var(--map-land)' }}>
+      <div ref={containerRef} className="relative" style={{ backgroundColor: 'var(--map-land)' }}>
         <MapGL
           ref={mapRef}
           mapLib={maplibregl}
@@ -331,6 +397,9 @@ export default function MapPage() {
               overflow: 'hidden',
               border: '1px solid var(--panel-border)',
               boxShadow: '0 6px 18px rgba(15, 23, 42, 0.45)',
+              opacity: fadeStyle.opacity as number,
+              transition: fadeStyle.transition,
+              pointerEvents: fadeStyle.pointerEvents as 'auto' | 'none',
             }}
             showCompass={projectionMode !== 'globe'}
             showZoom
@@ -351,7 +420,7 @@ export default function MapPage() {
           ) : null}
         </MapGL>
 
-        <div className="absolute top-3 left-3 z-10 flex items-start gap-2">
+        <div className="absolute top-3 left-3 z-10 flex items-start gap-2" style={fadeStyle}>
           <ProjectionToggle projectionMode={projectionMode} onToggle={toggleProjection} />
           <LocationSearch ref={locationSearchRef} onSelect={handleLocationSelect} />
           <ThemeToggle />
@@ -368,6 +437,7 @@ export default function MapPage() {
               backgroundColor: 'var(--panel-bg)',
               borderColor: 'var(--panel-border)',
               boxShadow: 'var(--controls-shadow)',
+              ...fadeStyle,
             }}
             onClick={resetView}
           >
@@ -378,6 +448,7 @@ export default function MapPage() {
         <div
           ref={filterPanelRef}
           className="absolute bottom-3 left-3 z-10 flex flex-col items-start gap-2"
+          style={filtersOpen ? undefined : fadeStyle}
         >
           {filtersOpen ? (
             <FilterMenu
@@ -415,7 +486,11 @@ export default function MapPage() {
           </div>
         </div>
 
-        <div ref={controlPanelRef} className="absolute bottom-3 right-3 z-10">
+        <div
+          ref={controlPanelRef}
+          className="absolute bottom-3 right-3 z-10"
+          style={settingsOpen || layersOpen ? undefined : fadeStyle}
+        >
           <MapSettings
             settingsOpen={settingsOpen}
             layersOpen={layersOpen}
@@ -452,6 +527,8 @@ export default function MapPage() {
             onRouteHeightChange={(value) => setRouteHeight(value)}
             routeOpacity={routeOpacity}
             onRouteOpacityChange={(value) => setRouteOpacity(value)}
+            routeAnimate={routeAnimate}
+            onRouteAnimateChange={(value) => setRouteAnimate(value)}
             airportSizeScale={airportSizeScale}
             onAirportSizeChange={(value) => setAirportSizeScale(value)}
             airportOpacity={airportOpacity}

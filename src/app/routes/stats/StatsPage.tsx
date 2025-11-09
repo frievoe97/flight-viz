@@ -58,58 +58,38 @@ export default function StatsPage() {
   return (
     <StatsLayout>
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <header
-          className="border-b border-[color:var(--panel-border)] px-6 py-4"
-          style={{ backgroundColor: 'var(--panel-bg)', color: 'var(--controls-fg)' }}
-        >
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-sm font-semibold uppercase tracking-[0.35em] opacity-80">
-                Statistics
-              </h1>
-              <p className="text-xs opacity-60">
-                Overview and single-flight analysis with a clear filter bar, compact KPIs, and
-                readable charts.
-              </p>
-            </div>
-
-            {state.activeView === 'flight' ? (
-              <Topbar
-                activeView={state.activeView}
-                onActiveViewChange={(view) => state.setActiveView(view)}
-                filteredCount={state.filteredFlights.length}
-                totalCount={state.flights.length}
-                filterDate={state.filterDate}
-                onFilterDateChange={(value) => state.setFilterDate(value)}
-                filterOrigin={state.filterOrigin}
-                onFilterOriginChange={(value) => state.setFilterOrigin(value)}
-                filterDestination={state.filterDestination}
-                onFilterDestinationChange={(value) => state.setFilterDestination(value)}
-                filterOriginCountry={state.filterOriginCountry}
-                onFilterOriginCountryChange={(value) => state.setFilterOriginCountry(value)}
-                filterDestinationCountry={state.filterDestinationCountry}
-                onFilterDestinationCountryChange={(value) =>
-                  state.setFilterDestinationCountry(value)
-                }
-                filterOptions={state.availableFilterOptions}
-                onResetFilters={() => {
-                  state.setSearchTerm('')
-                  state.setFilterDate('all')
-                  state.setFilterOrigin('all')
-                  state.setFilterDestination('all')
-                  state.setFilterOriginCountry('all')
-                  state.setFilterDestinationCountry('all')
-                }}
-                flightPickerOptions={state.flightPickerOptions}
-                selectedFlightId={state.selectedFlightId}
-                selectedFlightLabel={state.selectedFlightDisplay}
-                onSelectFlight={(id) => state.setSelectedFlightId(id)}
-              />
-            ) : null}
-          </div>
-        </header>
-
         <div className="flex flex-1 min-h-0 flex-col gap-6 px-6 py-6">
+          {state.activeView === 'flight' ? (
+            <Topbar
+              activeView={state.activeView}
+              onActiveViewChange={(view) => state.setActiveView(view)}
+              filteredCount={state.filteredFlights.length}
+              totalCount={state.flights.length}
+              filterDate={state.filterDate}
+              onFilterDateChange={(value) => state.setFilterDate(value)}
+              filterOrigin={state.filterOrigin}
+              onFilterOriginChange={(value) => state.setFilterOrigin(value)}
+              filterDestination={state.filterDestination}
+              onFilterDestinationChange={(value) => state.setFilterDestination(value)}
+              filterOriginCountry={state.filterOriginCountry}
+              onFilterOriginCountryChange={(value) => state.setFilterOriginCountry(value)}
+              filterDestinationCountry={state.filterDestinationCountry}
+              onFilterDestinationCountryChange={(value) => state.setFilterDestinationCountry(value)}
+              filterOptions={state.availableFilterOptions}
+              onResetFilters={() => {
+                state.setSearchTerm('')
+                state.setFilterDate('all')
+                state.setFilterOrigin('all')
+                state.setFilterDestination('all')
+                state.setFilterOriginCountry('all')
+                state.setFilterDestinationCountry('all')
+              }}
+              flightPickerOptions={state.flightPickerOptions}
+              selectedFlightId={state.selectedFlightId}
+              selectedFlightLabel={state.selectedFlightDisplay}
+              onSelectFlight={(id) => state.setSelectedFlightId(id)}
+            />
+          ) : null}
           {state.filteredFlights.length === 0 ? (
             <div className="flex flex-1 items-center justify-center">
               <div

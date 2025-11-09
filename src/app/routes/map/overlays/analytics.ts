@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { HexagonLayer } from '@deck.gl/aggregation-layers'
 import { lerpColor, colors } from '@/lib/theme/tokens'
 
@@ -17,6 +17,7 @@ export function useAnalyticsLayer({
   radius,
   elevationScale = 20,
   opacity = 0.95,
+  isPaused = false,
 }: {
   points: AnalyticsPoint[]
   isActive: boolean
@@ -24,7 +25,34 @@ export function useAnalyticsLayer({
   radius: number
   elevationScale?: number
   opacity?: number
+  isPaused?: boolean
 }) {
+  // Animate hex columns rising from ground when activated or metric changes
+  const [elevProgress, setElevProgress] = useState(0)
+  const rafRef = useRef(0)
+
+  useEffect(() => {
+    if (!isActive) {
+      setElevProgress(0)
+      return
+    }
+    let start: number | null = null
+    const DURATION = 600 // ms
+    const loop = (now: number) => {
+      if (start == null) start = now
+      const t = Math.max(0, Math.min(1, (now - start) / DURATION))
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3)
+      setElevProgress(eased)
+      if (t < 1 && !isPaused) {
+        rafRef.current = requestAnimationFrame(loop)
+      }
+    }
+    setElevProgress(0)
+    rafRef.current = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [isActive, metric, radius, elevationScale, isPaused])
+
   return useMemo(() => {
     if (!isActive) return null
     const forward = Array.from({ length: 6 }, (_, i) => {
@@ -32,7 +60,10 @@ export function useAnalyticsLayer({
       return lerpColor(colors.flight.low, colors.flight.high, t)
     }) as [number, number, number][]
     const reversed = [...forward].reverse() as [number, number, number][]
-    const colorRange = metric === 'alt' ? reversed : forward
+    // Invert colors for speed and count, keep forward for altitude
+    const colorRange = metric === 'alt' ? forward : reversed
+
+    const effectiveElevationScale = Math.max(0, elevationScale) * Math.max(0, elevProgress)
 
     return new HexagonLayer({
       id: 'hex-density',
@@ -42,11 +73,12 @@ export function useAnalyticsLayer({
       gpuAggregation: false,
       opacity,
       radius,
-      elevationScale,
+      elevationScale: effectiveElevationScale,
       // Ensure re-aggregation when the metric changes
       updateTriggers: {
         getElevationValue: [metric],
         getColorValue: [metric],
+        elevationScale: [effectiveElevationScale],
       },
       getPosition: (d: AnalyticsPoint) => d.position,
       getElevationValue: (pointsInBin: any[]) => {
@@ -88,5 +120,5 @@ export function useAnalyticsLayer({
       colorRange,
       material: true,
     })
-  }, [points, isActive, metric, radius, elevationScale, opacity])
+  }, [points, isActive, metric, radius, elevationScale, opacity, elevProgress])
 }

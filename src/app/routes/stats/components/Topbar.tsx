@@ -196,8 +196,8 @@ export function SegmentedControl<T extends string>({
             className={cn(
               'px-3 py-1.5 rounded-md font-medium transition-colors inline-flex items-center gap-1.5',
               active
-                ? 'bg-[color:var(--panel-border)]/20'
-                : 'opacity-70 hover:bg-[color:var(--panel-border)]/10'
+                ? 'bg-[color:var(--panel-border)]/40 ring-1 ring-[color:var(--panel-border)]'
+                : 'opacity-80 hover:bg-[color:var(--panel-border)]/15'
             )}
           >
             {opt.icon ? opt.icon : null}

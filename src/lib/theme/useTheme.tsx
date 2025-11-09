@@ -5,11 +5,8 @@ export type Theme = 'light' | 'dark'
 const STORAGE_KEY = 'theme'
 
 function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'dark'
-  const saved = window.localStorage.getItem(STORAGE_KEY) as Theme | null
-  if (saved === 'light' || saved === 'dark') return saved
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-  return prefersDark ? 'dark' : 'light'
+  // Always start in dark mode on initial load
+  return 'dark'
 }
 
 function applyThemeToDom(theme: Theme) {
@@ -35,6 +32,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [theme])
 
+  // Follow system preference changes after initial load
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e: MediaQueryListEvent) => {
+      setTheme(e.matches ? 'dark' : 'light')
+    }
+    // Modern browsers
+    mq.addEventListener?.('change', handler)
+    // Fallback for older browsers
+
+    mq.addListener?.(handler)
+    return () => {
+      mq.removeEventListener?.('change', handler)
+
+      mq.removeListener?.(handler)
+    }
+  }, [])
+
   // Optional: sync between tabs and late consumers
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -47,7 +63,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ theme, setTheme, toggleTheme: () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark')) }),
+    () => ({
+      theme,
+      setTheme,
+      toggleTheme: () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark')),
+    }),
     [theme]
   )
 
@@ -60,5 +80,9 @@ export function useTheme() {
   // Fallback (if used outside provider): apply directly but not shared
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
   useEffect(() => applyThemeToDom(theme), [theme])
-  return { theme, setTheme, toggleTheme: () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark')) }
+  return {
+    theme,
+    setTheme,
+    toggleTheme: () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark')),
+  }
 }

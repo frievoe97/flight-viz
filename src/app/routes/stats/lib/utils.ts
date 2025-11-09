@@ -154,10 +154,10 @@ export function computeYAxisWidth(
 
 /** Einheitliche, „freundliche“ Margins */
 export function smartMargins({
-  top = 12,
-  right = 16,
-  bottom = 24,
-  left = 12,
+  top = 0,
+  right = 0,
+  bottom = 0,
+  left = 0,
 }: Partial<{ top: number; right: number; bottom: number; left: number }> = {}) {
   return { top, right, bottom, left }
 }

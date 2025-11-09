@@ -39,6 +39,8 @@ type MapSettingsProps = {
   onRouteHeightChange: (value: number) => void
   routeOpacity: number
   onRouteOpacityChange: (value: number) => void
+  routeAnimate: boolean
+  onRouteAnimateChange: (value: boolean) => void
   airportSizeScale: number
   onAirportSizeChange: (value: number) => void
   airportOpacity: number
@@ -93,6 +95,8 @@ export function MapSettings({
   // onRouteHeightChange,
   routeOpacity,
   onRouteOpacityChange,
+  routeAnimate,
+  onRouteAnimateChange,
   airportSizeScale,
   onAirportSizeChange,
   airportOpacity,
@@ -318,6 +322,16 @@ export function MapSettings({
                 value={routeWidthScale}
                 onChange={(event) => onRouteWidthChange(Number(event.target.value))}
               />
+              <label className="mt-2 flex items-center gap-2 text-[0.8rem]">
+                <input
+                  type="checkbox"
+                  checked={routeAnimate}
+                  onChange={(e) => onRouteAnimateChange(e.target.checked)}
+                />
+                <span className="uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
+                  Animate
+                </span>
+              </label>
               {/* <div className="mt-2 flex items-center justify-between">
                 <span className="font-semibold uppercase tracking-wide text-[0.7rem] text-[hsl(var(--muted-foreground))]">
                   Route height

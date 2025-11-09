@@ -76,6 +76,7 @@ export function useMapPageState({ theme }: { theme: Theme }) {
   const [routeWidthScale, setRouteWidthScale] = useState(1)
   const [routeHeight, setRouteHeight] = useState(0.2)
   const [routeOpacity, setRouteOpacity] = useState(0.9)
+  const [routeAnimate, setRouteAnimate] = useState(true)
   const [airportSizeScale, setAirportSizeScale] = useState(1)
   const [airportOpacity, setAirportOpacity] = useState(0.95)
   const [analyticsRadius, setAnalyticsRadius] = useState(20000)
@@ -663,6 +664,7 @@ export function useMapPageState({ theme }: { theme: Theme }) {
     radius: analyticsRadius,
     elevationScale: analyticsElevationScale,
     opacity: analyticsOpacity,
+    isPaused: isMotionPaused,
   })
 
   // removed speed columns and climb bursts layers
@@ -769,6 +771,8 @@ export function useMapPageState({ theme }: { theme: Theme }) {
     height: routeHeight,
     opacity: routeOpacity,
     theme,
+    animate: routeAnimate,
+    isPaused: isMotionPaused,
   })
 
   const airportLayer = useAirportHubsLayer({
@@ -797,7 +801,12 @@ export function useMapPageState({ theme }: { theme: Theme }) {
     if (trailLayers.length) out.push(...trailLayers)
     if (analyticsLayer) out.push(analyticsLayer)
     // speed columns / climb bursts removed
-    if (routesLayer) out.push(routesLayer)
+    if (routesLayer) {
+      // routesLayer can be a single Layer or an array of Layers (animated)
+
+      if (Array.isArray(routesLayer)) out.push(...routesLayer)
+      else out.push(routesLayer)
+    }
     if (airportLayer) out.push(airportLayer)
     return out
   }, [segmentsLayer, flightsLayer, trailLayers, analyticsLayer, routesLayer, airportLayer])
@@ -1075,6 +1084,8 @@ export function useMapPageState({ theme }: { theme: Theme }) {
     setRouteHeight,
     routeOpacity,
     setRouteOpacity,
+    routeAnimate,
+    setRouteAnimate,
     airportSizeScale,
     setAirportSizeScale,
     airportOpacity,

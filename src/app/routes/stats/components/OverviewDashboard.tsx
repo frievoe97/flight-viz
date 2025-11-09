@@ -98,7 +98,7 @@ export function OverviewDashboard({
         subtitle="Daily mission count across all flights"
         className="min-h-[280px]"
       >
-        <BarChart data={flightsPerDay} margin={smartMargins()} barCategoryGap={8} barGap={2}>
+        <BarChart data={flightsPerDay} margin={smartMargins()} barCategoryGap={6} barGap={2}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis
             dataKey="date"
@@ -127,7 +127,7 @@ export function OverviewDashboard({
 
       {/* Flights per hour */}
       <ChartCard title="Flights per hour" subtitle="Departure time (UTC)" className="min-h-[280px]">
-        <BarChart data={flightsByHour} margin={smartMargins()} barCategoryGap={8} barGap={2}>
+        <BarChart data={flightsByHour} margin={smartMargins()} barCategoryGap={6} barGap={2}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis
             dataKey="label"
@@ -158,8 +158,8 @@ export function OverviewDashboard({
       >
         <BarChart
           data={flightLengthHistogram}
-          margin={smartMargins({ right: 16 })}
-          barCategoryGap={8}
+          margin={smartMargins()}
+          barCategoryGap={6}
           barGap={2}
         >
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
@@ -234,8 +234,8 @@ export function OverviewDashboard({
         <BarChart
           data={topFlights}
           layout="vertical"
-          margin={smartMargins({ left: 12, right: 24 })}
-          barCategoryGap={8}
+          margin={smartMargins()}
+          barCategoryGap={6}
           barGap={2}
         >
           <CartesianGrid
@@ -259,7 +259,7 @@ export function OverviewDashboard({
             type="category"
             width={computeYAxisWidth(
               topFlights.map((d) => d.label),
-              { min: 120 }
+              { min: 0 }
             )}
             tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
             tickLine={false}
@@ -284,12 +284,7 @@ export function OverviewDashboard({
         subtitle="Aggregated mission hours"
         className="min-h-[280px]"
       >
-        <BarChart
-          data={totalFlightTimeByDay}
-          margin={smartMargins({ right: 8 })}
-          barCategoryGap={8}
-          barGap={2}
-        >
+        <BarChart data={totalFlightTimeByDay} margin={smartMargins()} barCategoryGap={6} barGap={2}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis
             dataKey="date"
@@ -322,7 +317,7 @@ export function OverviewDashboard({
         subtitle="Departure day (UTC)"
         className="min-h-[280px]"
       >
-        <BarChart data={flightsByWeekday} margin={smartMargins()} barCategoryGap={8} barGap={2}>
+        <BarChart data={flightsByWeekday} margin={smartMargins()} barCategoryGap={6} barGap={2}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis
             dataKey="label"
@@ -351,7 +346,7 @@ export function OverviewDashboard({
         subtitle="Buckets in minutes/hours"
         className="min-h-[280px]"
       >
-        <BarChart data={durationHistogram} margin={smartMargins()} barCategoryGap={8} barGap={2}>
+        <BarChart data={durationHistogram} margin={smartMargins()} barCategoryGap={6} barGap={2}>
           <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
           <XAxis
             dataKey="label"
@@ -425,8 +420,8 @@ export function OverviewDashboard({
         <BarChart
           data={topOrigins}
           layout="vertical"
-          margin={smartMargins({ left: 12, right: 24 })}
-          barCategoryGap={8}
+          margin={smartMargins()}
+          barCategoryGap={6}
           barGap={2}
         >
           <CartesianGrid
@@ -448,7 +443,7 @@ export function OverviewDashboard({
             type="category"
             width={computeYAxisWidth(
               topOrigins.map((d) => d.value),
-              { min: 72 }
+              { min: 0 }
             )}
             tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
             tickLine={false}
@@ -475,8 +470,8 @@ export function OverviewDashboard({
         <BarChart
           data={topDestinations}
           layout="vertical"
-          margin={smartMargins({ left: 12, right: 24 })}
-          barCategoryGap={8}
+          margin={smartMargins()}
+          barCategoryGap={6}
           barGap={2}
         >
           <CartesianGrid
@@ -498,7 +493,7 @@ export function OverviewDashboard({
             type="category"
             width={computeYAxisWidth(
               topDestinations.map((d) => d.value),
-              { min: 72 }
+              { min: 0 }
             )}
             tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
             tickLine={false}
@@ -525,8 +520,8 @@ export function OverviewDashboard({
         <BarChart
           data={topAircraftTypes}
           layout="vertical"
-          margin={smartMargins({ left: 12, right: 24 })}
-          barCategoryGap={8}
+          margin={smartMargins()}
+          barCategoryGap={6}
           barGap={2}
         >
           <CartesianGrid
@@ -548,7 +543,7 @@ export function OverviewDashboard({
             type="category"
             width={computeYAxisWidth(
               topAircraftTypes.map((d) => abbreviateType(d.label)),
-              { min: 140 }
+              { min: 0 }
             )}
             tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
             tickLine={false}
@@ -574,9 +569,9 @@ export function OverviewDashboard({
             className="flex items-center gap-3 rounded-full border border-[color:var(--panel-border)] bg-[rgba(15,23,42,0.82)] px-3 py-1.5 text-xs font-medium text-white shadow"
             aria-pressed={ignoreSameStartTarget}
           >
-            <span className="whitespace-nowrap tracking-wide">
+            {/* <span className="whitespace-nowrap tracking-wide">
               Ignore identical origin/destination
-            </span>
+            </span> */}
             <span
               className={cn(
                 'relative inline-flex h-4 w-8 items-center rounded-full bg-white/15 transition-colors',
