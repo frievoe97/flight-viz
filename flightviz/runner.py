@@ -55,6 +55,9 @@ TARGETING_KEYS = {
     "type",
 }
 
+FLIGHTRADAR_CSV_DIR = PROJECT_ROOT / "flightradar_csv"
+TIME_COLUMN_NAME = "time_europe_berlin"
+
 log = logging.getLogger(__name__)
 
 
@@ -68,59 +71,127 @@ def parse_flight_targeting(html: str) -> Dict[str, str]:
     return result
 
 
+def process_flightradar_csv(entry: Dict[str, str]) -> None:
+    """Process a flight tracklog from a Flightradar24 CSV file."""
+    callsign = entry.get("callsign") or entry.get("rufzeichen") or "?"
+    csv_filename = (entry.get("flightradar_csv") or "").strip()
+    log.info("Processing flight %s from CSV: %s", callsign, csv_filename)
+
+    csv_path = FLIGHTRADAR_CSV_DIR / csv_filename
+    if not csv_path.is_file():
+        log.error("CSV file not found for %s: %s", callsign, csv_path)
+        return
+
+    try:
+        df = pd.read_csv(csv_path)
+        df_main = pd.DataFrame()
+
+        df_main[TIME_COLUMN_NAME] = pd.to_datetime(df["UTC"], utc=True).dt.strftime(
+            "%d.%m.%Y %H:%M:%S"
+        )
+
+        lat_lon = df["Position"].str.split(",", expand=True)
+        df_main["latitude"] = pd.to_numeric(lat_lon[0])
+        df_main["longitude"] = pd.to_numeric(lat_lon[1])
+
+        df_main["altitude_ft"] = df["Altitude"]
+        df_main["speed_kts"] = df["Speed"]
+        df_main["course_deg_clockwise_from_north"] = df["Direction"]
+        df_main["vertical_rate_fpm"] = pd.NA
+
+        metadata = {"time_column": TIME_COLUMN_NAME}
+        source_url = f"flightradar_csv://{csv_filename}"
+
+        export_tracklog(
+            entry=entry,
+            flight_url=source_url,
+            df_main=df_main,
+            tracklog_airports={},
+            metadata=metadata,
+            aircraft_info={},
+            flight_metadata={},
+        )
+    except Exception as e:
+        log.error(
+            "Failed to process CSV %s for flight %s: %s",
+            csv_filename,
+            callsign,
+            e,
+            exc_info=True,
+        )
+
+
 def process_flights(entries: Iterable[Dict[str, str]]) -> None:
     """Iterate through ``entries`` and export each available track log."""
     for entry in entries:
         callsign = entry.get("callsign") or entry.get("rufzeichen") or "?"
-        flight_url = (entry.get("url") or "").strip()
-        if not flight_url:
-            log.warning("Skipping %s: no flight URL provided", callsign)
-            continue
+        flight_url = (entry.get("flightaware_url") or "").strip()
+        flightradar_csv = (entry.get("flightradar_csv") or "").strip()
 
-        log.info("Processing flight %s (%s)", callsign, flight_url)
-        html_path, status = download_if_needed(
-            flight_url, FLIGHTS_CACHE_DIR, FLIGHTS_CACHE_JSON
-        )
-
-        if not html_path or status == "error":
-            log.error("Failed to obtain tracklog for %s (%s)", callsign, flight_url)
-            continue
-
-        with open(html_path, "r", encoding="utf-8") as handle:
-            html = handle.read()
-
-        flight_metadata = parse_flight_targeting(html)
-        if flight_metadata:
-            log.info("Flight metadata extracted for %s: %s", callsign, flight_metadata)
-        else:
-            log.info("No flight metadata found for %s", callsign)
-
-        aircraft_info = {}
-        aircraft_url = aircraft_page_from_flight_url(flight_url)
-        if aircraft_url:
-            aircraft_path, _ = download_if_needed(
-                aircraft_url, AIRCRAFT_CACHE_DIR, AIRCRAFT_CACHE_JSON
+        if flight_url:
+            log.info("Processing flight %s from FlightAware URL: %s", callsign, flight_url)
+            html_path, status = download_if_needed(
+                flight_url, FLIGHTS_CACHE_DIR, FLIGHTS_CACHE_JSON
             )
-            if aircraft_path:
-                try:
-                    with open(aircraft_path, "r", encoding="utf-8") as aircraft_handle:
-                        aircraft_html = aircraft_handle.read()
-                    aircraft_info = parse_aircraft_details(aircraft_html)
-                    if aircraft_info:
-                        log.info("Aircraft info parsed for %s: %s", callsign, aircraft_info)
-                except (OSError, ValueError, json.JSONDecodeError):
-                    aircraft_info = {}
 
-        df_main, airports_json, metadata = parse_tracklog_table(html, url=flight_url)
-        export_tracklog(
-            entry,
-            flight_url,
-            df_main,
-            airports_json,
-            metadata,
-            aircraft_info,
-            flight_metadata,
-        )
+            if not html_path or status == "error":
+                log.error(
+                    "Failed to obtain tracklog for %s (%s)", callsign, flight_url
+                )
+                continue
+
+            with open(html_path, "r", encoding="utf-8") as handle:
+                html = handle.read()
+
+            flight_metadata = parse_flight_targeting(html)
+            if flight_metadata:
+                log.info(
+                    "Flight metadata extracted for %s: %s", callsign, flight_metadata
+                )
+            else:
+                log.info("No flight metadata found for %s", callsign)
+
+            aircraft_info = {}
+            aircraft_url = aircraft_page_from_flight_url(flight_url)
+            if aircraft_url:
+                aircraft_path, _ = download_if_needed(
+                    aircraft_url, AIRCRAFT_CACHE_DIR, AIRCRAFT_CACHE_JSON
+                )
+                if aircraft_path:
+                    try:
+                        with open(
+                            aircraft_path, "r", encoding="utf-8"
+                        ) as aircraft_handle:
+                            aircraft_html = aircraft_handle.read()
+                        aircraft_info = parse_aircraft_details(aircraft_html)
+                        if aircraft_info:
+                            log.info(
+                                "Aircraft info parsed for %s: %s",
+                                callsign,
+                                aircraft_info,
+                            )
+                    except (OSError, ValueError, json.JSONDecodeError):
+                        aircraft_info = {}
+
+            df_main, airports_json, metadata = parse_tracklog_table(
+                html, url=flight_url
+            )
+            export_tracklog(
+                entry,
+                flight_url,
+                df_main,
+                airports_json,
+                metadata,
+                aircraft_info,
+                flight_metadata,
+            )
+        elif flightradar_csv:
+            process_flightradar_csv(entry)
+        else:
+            log.warning(
+                "Skipping %s: no flightaware_url or flightradar_csv provided", callsign
+            )
+            continue
 
 
 def export_tracklog(

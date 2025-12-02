@@ -40,9 +40,12 @@ def read_flights_csv(csv_path: str) -> List[Dict[str, str]]:
             if new_format:
                 rows.append(
                     {
-                        "url": normalized.get("flightaware_url", ""),
+                        "flightaware_url": normalized.get("flightaware_url", ""),
+                        "flightradar_csv": normalized.get("flightradar_csv", ""),
                         "callsign": normalized.get("callsign", ""),
-                        "aircraft_registration": normalized.get("aircraft_registration", ""),
+                        "aircraft_registration": normalized.get(
+                            "aircraft_registration", ""
+                        ),
                         "aircraft_hex": normalized.get("aircraft_hex", ""),
                         "origin_iata": normalized.get("origin_iata", ""),
                         "origin_icao": normalized.get("origin_icao", ""),
@@ -53,7 +56,8 @@ def read_flights_csv(csv_path: str) -> List[Dict[str, str]]:
             else:
                 rows.append(
                     {
-                        "url": normalized.get("url", ""),
+                        "flightaware_url": normalized.get("url", ""),
+                        "flightradar_csv": "",
                         "callsign": normalized.get("rufzeichen", ""),
                         "aircraft_registration": normalized.get("flugzeug", ""),
                         "aircraft_hex": normalized.get("flugzeugnummer", ""),
