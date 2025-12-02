@@ -1,5 +1,9 @@
 flightaware_url,flightradar_csv,callsign,aircraft_registration,aircraft_hex,origin_iata,origin_icao,destination_iata,destination_icao
 https://www.flightaware.com/live/flight/UNI133/history/20251001/0923Z/EDDK/EDVK/tracklog,,UNI133,D-CDOC,3CC95A,CGN,EDDK,KSF,EDVK
+,UNI133_3c762161,UNI133,D-CDOC,3CC95A,KSF,EDVK,KSF,EDVK
+,UNI133_3c7625f7,UNI133,D-CDOC,3CC95A,KSF,EDVK,KSF,EDVK
+,UNI133_3c762df9,UNI133,D-CDOC,3CC95A,KSF,EDVK,KSF,EDVK
+,UNI133_3c763a09,UNI133,D-CDOC,3CC95A,KSF,EDVK,KSF,EDVK
 https://www.flightaware.com/live/flight/UNI133/history/20251001/1054Z/tracklog,,UNI133,D-CDOC,3CC95A,KSF,EDVK,CGN,EDDK
 https://www.flightaware.com/live/flight/UNI135/history/20251009/1002Z/EDDK/LEPA/tracklog,,UNI135,D-CHLP,3CD3A9,CGN,EDDK,PMI,LEPA
 https://www.flightaware.com/live/flight/UNI135/history/20251009/1443Z/LEPA/EGNT/tracklog,,UNI135,D-CHLP,3CD3A9,PMI,LEPA,NCL,EGNT
