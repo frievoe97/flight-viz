@@ -77,7 +77,7 @@ def process_flightradar_csv(entry: Dict[str, str]) -> None:
     csv_filename = (entry.get("flightradar_csv") or "").strip()
     log.info("Processing flight %s from CSV: %s", callsign, csv_filename)
 
-    csv_path = FLIGHTRADAR_CSV_DIR / csv_filename
+    csv_path = (FLIGHTRADAR_CSV_DIR / csv_filename).with_suffix(".csv")
     if not csv_path.is_file():
         log.error("CSV file not found for %s: %s", callsign, csv_path)
         return
