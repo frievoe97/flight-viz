@@ -12,7 +12,7 @@ https://www.flightaware.com/about/careers
 	  
       <!-- 	Attention! You must agree with FlightAware's Terms of Use at http://flightaware.com/about/termsofuse
   Data robots and collection agents should use http://flightaware.com/commercial/flightxml/
-            Copyright 2025 FlightAware.  All Rights Reserved. -->
+            Copyright 2026 FlightAware.  All Rights Reserved. -->
       <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
       <meta http-equiv="X-UA-Compatible" content="IE=edge" />
       <meta name="twitter:site" content="@FlightAware" />
@@ -75,7 +75,7 @@ https://www.flightaware.com/about/careers
   <link rel="alternate" href="https://zh-tw.flightaware.com/live/flight/UNI133/history/20251130/1131Z/EDDK/GCXO/tracklog" hreflang="zh-tw" />
 <!-- non scripts -->
   <link rel="stylesheet" type="text/css"  href="https://www.flightaware.com/include/e5c0ebb2bfa71-foundation/foundation.css" />
-  <link rel="stylesheet" type="text/css"  href="https://www.flightaware.com/include/57a7c64138cb-flightaware.css" />
+  <link rel="stylesheet" type="text/css"  href="https://www.flightaware.com/include/036e68e9199f-flightaware.css" />
   
 		<script>
 			var url = new URL(window.location);
@@ -111,7 +111,7 @@ https://www.flightaware.com/about/careers
 			<![endif]-->
 <!-- scripts -->
 
-<script type="text/javascript">user = {"username":"","TZ":":America/New_York","accounttype":"0","email":"","id":"","locale":"en_US","lang":"en","name":" ","active":"","arincUser":false,"fboUser":false,"suaCustomer":false,"distance_units":"sm","airportCode":"","altitudeDisplay":"feet","speedDisplay":"miles","fuelBurnDisplay":"gallons","flightpageLayout":"0","comma":",","decimal":".","adhocEnabled":false,"region":"north_america","adblock_page_load_threshold":3,"token":"371631730"};</script>
+<script type="text/javascript">user = {"username":"","TZ":":America/New_York","accounttype":"0","email":"","id":"","locale":"en_US","lang":"en","name":" ","active":"","arincUser":false,"fboUser":false,"suaCustomer":false,"distance_units":"sm","airportCode":"","altitudeDisplay":"feet","speedDisplay":"miles","fuelBurnDisplay":"gallons","flightpageLayout":"0","comma":",","decimal":".","adhocEnabled":false,"region":"north_america","adblock_page_load_threshold":3,"token":"130747645"};</script>
 
 
 <script type="text/javascript">var FAIntegrationConfig = {"enabled":false,"idents":[]};</script>
@@ -119,7 +119,20 @@ https://www.flightaware.com/about/careers
 
 <script type="text/javascript">var airportNamesUrl = 'https://www.flightaware.com/ajax/ignoreall/airport_names_yajl.rvt', airportValidateUrl = 'https://www.flightaware.com/ajax/validate_airport.rvt';</script>
 
-  <script type="text/javascript" src="https://www.flightaware.com/include/0a961d605dff-flightaware.js"   ></script>
+  <script type="text/javascript" src="https://www.flightaware.com/include/42f887775619-algolia/algoliasearch.umd.min.js"   ></script>
+  <script type="text/javascript">
+				window.AlgoliaSearch = {
+					appId: "PRYH7WMO1I",
+					apiKey: "524d22462cdd80b83b4915306b7d66fb",
+					indexName: "omnisearch2",
+				};
+
+				window.AlgoliaSearch.searchClient = window.algoliasearch.algoliasearch(
+					window.AlgoliaSearch.appId,
+					window.AlgoliaSearch.apiKey,
+				);
+			</script>
+  <script type="text/javascript" src="https://www.flightaware.com/include/4d0085df501e-flightaware.js"   ></script>
   <script type="text/javascript" src="https://www.flightaware.com/ajax/ignoreall/airlines_js.rvt?locale=en_US&amp;country=US&amp;1"></script>
   <script type="text/javascript" src="https://www.flightaware.com/include/6d6f3af323da-flight_tracklog.js"   ></script>
   <script type="text/javascript" src="https://www.flightaware.com/include/8d3d1db5682a-jquery.stickytableheaders.min.js"   ></script>
@@ -857,7 +870,7 @@ https://www.flightaware.com/about/careers
 			</a>
 		</div>
 	</div>
-</nav><div id="mainBody"><header role="banner" id="topWrapper"><div class="topMenuBarWrapper accountHighlight"><nav class="topMenuBar"><div class="topMenuList"><div class="sp_menu_item"><a href="https://login.flightaware.com/signup"><i class="fa fa-plane"></i> Join FlightAware</a></div><div class="sp_menu_item"><a href="https://login.flightaware.com/signin"><i class="fa fa-plane"></i> Login</a></div><div aria-label="Clock Container" id="headerClock" class="sp_menu_item fadate-clock noHover"><span title="EST">06:04AM EST</span>
+</nav><div id="mainBody"><header role="banner" id="topWrapper"><div class="topMenuBarWrapper accountHighlight"><nav class="topMenuBar"><div class="topMenuList"><div class="sp_menu_item"><a href="https://login.flightaware.com/signup"><i class="fa fa-plane"></i> Join FlightAware</a></div><div class="sp_menu_item"><a href="https://login.flightaware.com/signin"><i class="fa fa-plane"></i> Login</a></div><div aria-label="Clock Container" id="headerClock" class="sp_menu_item fadate-clock noHover"><span title="EDT">04:15AM EDT</span>
 </div><div class="sp_menu_item noHover " id="LocaleTopBoxItem"><div id="LocaleTopBox"><form  action="https://www.flightaware.com/account/locale_switch.rvt" method="get" style="display: inline;">
  <select name="locale"  aria-label="Locale Picker" class="localePicker" onchange="this.form.submit();">
   <option value="ar_SA">العربية</option>
@@ -887,9 +900,9 @@ https://www.flightaware.com/about/careers
   <option value="zh_HK">中文(香港)</option>
   <option value="zh_TW">中文(台灣)</option>
  </select>
- <input type="hidden" name="csrf_token" value="371631730" />
+ <input type="hidden" name="csrf_token" value="130747645" />
 </form>
-<a href="https://www.flightaware.com/account/locale_switch.rvt?csrf_token=371631730&locale=en_US"><img height="11" width="16" src="https://www.flightaware.com/images/countries/US.png" alt="US Flag" title="Switch to US FlightAware" /></a>&nbsp;</div></div></div></nav></div><div id="topContent"><div class="menuIcon"><i class="fa fa-bars"></i></div><div class="logoLeft float_left"><a href="/"><img src="https://www.flightaware.com/images/nav/flightaware-logo.png" alt="FlightAware" class="faLogo " /></a></div><div id="headerSearchForm" class="headerTrack"><div class="flightSearchForm"><div class="searchToggle text_align_right" > <div class="search_in"><span class="search_in_content">All</span><select aria-label="Search Method" class="trackSelect"><option value="omniSearch">All</option><option value="routeSearch">Route</option><option value="airlineSearch">Airline flight</option><option value="privateSearch">Private flight (tail #)</option><option value="airportSearch">Airport</option></select></div></div><div id="omniSearch" data-fa-search-type="omniSearch" class="searchOption active"><div class="fa_omnisearch_container"><form id="omnisearch_form" method="get" action="//www.flightaware.com/ajax/ignoreall/omnisearch/disambiguation.rvt"><input type="hidden" name="searchterm" value=""><input type="hidden" name="token" value=""><input type="hidden" id="omni_headerSearchForm" data-version="50" data-server="www.flightaware.com" data-alias="www.flightaware.com"  data-startsearch="Please begin searching to receive suggestions"   data-ambiguous="More results for %1 ..."   data-searching="Searching..."   data-recent="Recent Searches"   data-placeholder="&#xf002;&nbsp;&nbsp; Search for flight, tail, airport, or city"  tabindex="0"><div style="display:none;" class="omnisearch_loading"><i class="fa fa-spinner fa-pulse"></i></div></form></div></div><div data-fa-search-type="routeSearch" class="searchOption routeSearch hide text_align_left" ><form action="/live/findflight"><div class="trackInputContainer"><div class="trackInput"><input name="origin" class="trackRouteOrigin" type="text" placeholder="Origin" title="Origin" aria-label="Origin"  /></div></div><div tabindex="0" role="button" class="route_swap"> <div class="header_swap"><img alt="Swap" src="https://www.flightaware.com/images/home_main/flip_fields.svg" /></div></div><div class="trackInputContainer"><div class="trackInput"><input name="destination" class="trackRouteDestination" type="text" placeholder="Destination " title="Destination " aria-label="Destination " /></div></div><input type="submit" hidefocus="true" style="display: none;"></input></form></div><div data-fa-search-type="airlineSearch" class="searchOption multiple hide text_align_left" > <form class="airlineSearch" action="/live/form.rvt"><div class="trackInputContainer airlineName "><div class="trackInput"><input id="airline_name" name="q" class="trackAirlineName" type="text" title="Airline" aria-label="Airline (e.g. United)" placeholder="Airline"/></div></div><div class="trackInputContainer flightNumber "><div class="trackInput"><input id="ident_suffix" name="ident_suffix" class="trackAirlineNumber" type="text" title="Flight #" aria-label="Flight # (e.g. 450)" placeholder="Flight #" /></div></div><input type="hidden" id="ident_prefix" name="ident_prefix"><input type="submit" hidefocus="true" style="display: none;"></input><span class="fa fa-times-circle-o" id="airlineSearchCancel"></span></form></div><form id="privateSearch" data-fa-search-type="privateSearch" class="searchOption hide text_align_left" action="/live/form.rvt"><div class="trackInput"><input name="ident" class="trackTail" value="" type="text" title="Flight/Tail# (e.g. N123AB)" aria-label="Flight/Tail# (e.g. N123AB)" placeholder="Flight/Tail# (e.g. N123AB)" /></div></form><form id="airportSearch" data-fa-search-type="airportSearch" class="searchOption multiple hide text_align_left" action="/live/form.rvt"><div class="trackInput"><input name="airport" id="airport" class="trackAirportCode" type="text" title="Airport Code (e.g. KJFK)" aria-label="Airport Code (e.g. KJFK)" value="" placeholder="Airport Code (e.g. KJFK)" /></div><div class="trackInput"><input id="airport_name_or_city" name="airport_name_or_city" class="trackAirportCity" type="text" title="Airport City (e.g. New York)" aria-label="Airport City (e.g. New York)" placeholder="Airport City (e.g. New York)" /></div><input type="submit" hidefocus="true" style="display: none;"></input></form><div class="trackSubmit"><button type="submit" class="blue_button"><img src="https://www.flightaware.com/images/icons/searchIcon-white.svg" alt="Submit Search"/></button></div></div></div><div id="signUpButton"><a href="/account/join/">Sign Up</a></div><nav class="navBar" role="navigation" aria-label="Main navigation">
+<a href="https://www.flightaware.com/account/locale_switch.rvt?csrf_token=130747645&locale=en_US"><img height="11" width="16" src="https://www.flightaware.com/images/countries/US.png" alt="US Flag" title="Switch to US FlightAware" /></a>&nbsp;</div></div></div></nav></div><div id="topContent"><div class="menuIcon"><i class="fa fa-bars"></i></div><div class="logoLeft float_left"><a href="/"><img src="https://www.flightaware.com/images/nav/flightaware-logo.png" alt="FlightAware" class="faLogo " /></a></div><div id="headerSearchForm" class="headerTrack"><div class="flightSearchForm"><div class="searchToggle text_align_right" > <div class="search_in"><span class="search_in_content">All</span><select aria-label="Search Method" class="trackSelect"><option value="omniSearch">All</option><option value="routeSearch">Route</option><option value="airlineSearch">Airline flight</option><option value="privateSearch">Private flight (tail #)</option><option value="airportSearch">Airport</option></select></div></div><div id="omniSearch" data-fa-search-type="omniSearch" class="searchOption active"><div class="fa_omnisearch_container"><form id="omnisearch_form" method="get" action="//www.flightaware.com/ajax/ignoreall/omnisearch/disambiguation.rvt"><input type="hidden" name="searchterm" value=""><input type="hidden" name="token" value=""><input type="hidden" id="omni_headerSearchForm" data-version="50" data-server="www.flightaware.com" data-alias="www.flightaware.com"  data-startsearch="Please begin searching to receive suggestions"   data-ambiguous="More results for %1 ..."   data-searching="Searching..."   data-recent="Recent Searches"   data-placeholder="&#xf002;&nbsp;&nbsp; Search for flight, tail, airport, or city"  tabindex="0"><div style="display:none;" class="omnisearch_loading"><i class="fa fa-spinner fa-pulse"></i></div></form></div></div><div data-fa-search-type="routeSearch" class="searchOption routeSearch hide text_align_left" ><form action="/live/findflight"><div class="trackInputContainer"><div class="trackInput"><input name="origin" class="trackRouteOrigin" type="text" placeholder="Origin" title="Origin" aria-label="Origin"  /></div></div><div tabindex="0" role="button" class="route_swap"> <div class="header_swap"><img alt="Swap" src="https://www.flightaware.com/images/home_main/flip_fields.svg" /></div></div><div class="trackInputContainer"><div class="trackInput"><input name="destination" class="trackRouteDestination" type="text" placeholder="Destination " title="Destination " aria-label="Destination " /></div></div><input type="submit" hidefocus="true" style="display: none;"></input></form></div><div data-fa-search-type="airlineSearch" class="searchOption multiple hide text_align_left" > <form class="airlineSearch" action="/live/form.rvt"><div class="trackInputContainer airlineName "><div class="trackInput"><input id="airline_name" name="q" class="trackAirlineName" type="text" title="Airline" aria-label="Airline (e.g. United)" placeholder="Airline"/></div></div><div class="trackInputContainer flightNumber "><div class="trackInput"><input id="ident_suffix" name="ident_suffix" class="trackAirlineNumber" type="text" title="Flight #" aria-label="Flight # (e.g. 450)" placeholder="Flight #" /></div></div><input type="hidden" id="ident_prefix" name="ident_prefix"><input type="submit" hidefocus="true" style="display: none;"></input><span class="fa fa-times-circle-o" id="airlineSearchCancel"></span></form></div><form id="privateSearch" data-fa-search-type="privateSearch" class="searchOption hide text_align_left" action="/live/form.rvt"><div class="trackInput"><input name="ident" class="trackTail" value="" type="text" title="Flight/Tail# (e.g. N123AB)" aria-label="Flight/Tail# (e.g. N123AB)" placeholder="Flight/Tail# (e.g. N123AB)" /></div></form><form id="airportSearch" data-fa-search-type="airportSearch" class="searchOption multiple hide text_align_left" action="/live/form.rvt"><div class="trackInput"><input name="airport" id="airport" class="trackAirportCode" type="text" title="Airport Code (e.g. KJFK)" aria-label="Airport Code (e.g. KJFK)" value="" placeholder="Airport Code (e.g. KJFK)" /></div><div class="trackInput"><input id="airport_name_or_city" name="airport_name_or_city" class="trackAirportCity" type="text" title="Airport City (e.g. New York)" aria-label="Airport City (e.g. New York)" placeholder="Airport City (e.g. New York)" /></div><input type="submit" hidefocus="true" style="display: none;"></input></form><div class="trackSubmit"><button type="submit" class="blue_button"><img src="https://www.flightaware.com/images/icons/searchIcon-white.svg" alt="Submit Search"/></button></div></div></div><div id="signUpButton"><a href="/account/join/">Sign Up</a></div><nav class="navBar" role="navigation" aria-label="Main navigation">
 
 <ul id="listMenuRoot" role="menubar">
 			<li class="menu_item" role="menuitem" aria-haspopup="true">
@@ -1714,7 +1727,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">7,500</span><span class="hide-for-medium-up">7500</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">3,132&nbsp;<img src="https://www.flightaware.com/images/live/arrow_up.gif" height="12" width="12" alt="Climbing" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (CGN / EDDK) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 06:28:57 AM</span><span class="hide-for-medium-up">06:28AM</span></td>
@@ -1868,7 +1881,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">23,100</span><span class="hide-for-medium-up">23100</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">2,559&nbsp;<img src="https://www.flightaware.com/images/live/arrow_up.gif" height="12" width="12" alt="Climbing" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (CGN / EDDK) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 06:34:18 AM</span><span class="hide-for-medium-up">06:34AM</span></td>
@@ -2470,7 +2483,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFON) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 06:54:56 AM</span><span class="hide-for-medium-up">06:54AM</span></td>
@@ -2890,7 +2903,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 07:09:56 AM</span><span class="hide-for-medium-up">07:09AM</span></td>
@@ -2904,7 +2917,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 07:10:26 AM</span><span class="hide-for-medium-up">07:10AM</span></td>
@@ -2918,7 +2931,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 07:10:56 AM</span><span class="hide-for-medium-up">07:10AM</span></td>
@@ -2932,7 +2945,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 07:11:26 AM</span><span class="hide-for-medium-up">07:11AM</span></td>
@@ -2946,7 +2959,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 07:11:56 AM</span><span class="hide-for-medium-up">07:11AM</span></td>
@@ -2960,7 +2973,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 07:12:27 AM</span><span class="hide-for-medium-up">07:12AM</span></td>
@@ -2974,7 +2987,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 07:12:57 AM</span><span class="hide-for-medium-up">07:12AM</span></td>
@@ -3002,7 +3015,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 07:13:58 AM</span><span class="hide-for-medium-up">07:13AM</span></td>
@@ -3016,7 +3029,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 07:14:28 AM</span><span class="hide-for-medium-up">07:14AM</span></td>
@@ -3030,7 +3043,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 07:15:00 AM</span><span class="hide-for-medium-up">07:15AM</span></td>
@@ -3282,7 +3295,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 07:24:03 AM</span><span class="hide-for-medium-up">07:24AM</span></td>
@@ -3324,7 +3337,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 07:25:33 AM</span><span class="hide-for-medium-up">07:25AM</span></td>
@@ -3366,7 +3379,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">41,000</span><span class="hide-for-medium-up">41000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFTQ) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFI) </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 07:27:04 AM</span><span class="hide-for-medium-up">07:27AM</span></td>
@@ -3870,7 +3883,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">43,000</span><span class="hide-for-medium-up">43000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFO) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 07:45:31 AM</span><span class="hide-for-medium-up">07:45AM</span></td>
@@ -3884,7 +3897,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">43,000</span><span class="hide-for-medium-up">43000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LFFO) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 07:46:01 AM</span><span class="hide-for-medium-up">07:46AM</span></td>
@@ -4906,7 +4919,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">43,000</span><span class="hide-for-medium-up">43000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LPMR) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 08:23:15 AM</span><span class="hide-for-medium-up">08:23AM</span></td>
@@ -5522,7 +5535,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">43,000</span><span class="hide-for-medium-up">43000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LPMR) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 08:45:31 AM</span><span class="hide-for-medium-up">08:45AM</span></td>
@@ -5550,7 +5563,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">43,000</span><span class="hide-for-medium-up">43000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LPJF) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 08:46:31 AM</span><span class="hide-for-medium-up">08:46AM</span></td>
@@ -5732,7 +5745,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">43,000</span><span class="hide-for-medium-up">43000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (CAT / LPCS) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 08:53:01 AM</span><span class="hide-for-medium-up">08:53AM</span></td>
@@ -5788,7 +5801,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">43,000</span><span class="hide-for-medium-up">43000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LPJF) </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 08:55:01 AM</span><span class="hide-for-medium-up">08:55AM</span></td>
@@ -6831,7 +6844,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">43,000</span><span class="hide-for-medium-up">43000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LPA / GCLP) </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 09:57:19 AM</span><span class="hide-for-medium-up">09:57AM</span></td>
@@ -6859,7 +6872,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">43,000</span><span class="hide-for-medium-up">43000</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">&nbsp;<img src="https://www.flightaware.com/images/live/blank12x13.gif" height="12" width="12" alt="Level" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LPA / GCLP) </span></td>
 					
 					</tr><tr class="smallrow1">
 					<td align="left"><span class="show-for-medium-up">Sun 09:58:29 AM</span><span class="hide-for-medium-up">09:58AM</span></td>
@@ -7153,7 +7166,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 					
 					<td align="right"><span class="show-for-medium-up">14,700</span><span class="hide-for-medium-up">14700</span></td>
 					<td align="right" class="show-for-medium-up-table"><span class="show-for-medium-up">-4,742&nbsp;<img src="https://www.flightaware.com/images/live/arrow_down.gif" height="12" width="12" alt="Descending" /></span></td>
-					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  </span></td>
+					<td align="left" class="show-for-large-up-table"><span class="show-for-large-up"><img src="https://www.flightaware.com/images/live/fasource.gif" height="12" width="12" /> <a href="/adsb/">FlightAware ADS-B</a>  (LPA / GCLP) </span></td>
 					
 					</tr><tr class="smallrow2">
 					<td align="left"><span class="show-for-medium-up">Sun 10:09:11 AM</span><span class="hide-for-medium-up">10:09AM</span></td>
@@ -7491,7 +7504,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 <div class="row"><div class="small-4 columns no-padding-ad">
 </div></div>
   </div>
-<div id="popupLogin"><div class="inline_form_box" style="max-width: 560px;"><div class="inline_form_box_title"><button type="button" class="close hint blur" value="close">x</button><h3>Login</h3></div><div class="inline_form_box_content"><p></p><div class="loginBox"><form id="loginForm" action="https://www.flightaware.com/account/session" method="post" name="myform"><input type='hidden' name='referer' value='https://www.flightaware.com/live/flight/UNI133/history/20251130/1131Z/EDDK/GCXO/tracklog'><input type='hidden' name='mode' value='login' /><div class="creds"><input size='30' type='text' name='flightaware_username' aria-label="Username or E-mail address" placeholder="Username or E-mail address" value=""/><input size='30' type='password' name='flightaware_password' aria-label="Password" placeholder="Password" /></div><input type='hidden' name='token' value='371631730'><button id='loginButton' name='submit' type='submit' class='actionButton'>Login</button><div class="passwordReset"><a href="https://www.flightaware.com/account/forgot">Forgot password?</a></div><div class="register">Don't have an account? Register now (free) for customized features, flight alerts, and more!
+<div id="popupLogin"><div class="inline_form_box" style="max-width: 560px;"><div class="inline_form_box_title"><button type="button" class="close hint blur" value="close">x</button><h3>Login</h3></div><div class="inline_form_box_content"><p></p><div class="loginBox"><form id="loginForm" action="https://www.flightaware.com/account/session" method="post" name="myform"><input type='hidden' name='referer' value='https://www.flightaware.com/live/flight/UNI133/history/20251130/1131Z/EDDK/GCXO/tracklog'><input type='hidden' name='mode' value='login' /><div class="creds"><input size='30' type='text' name='flightaware_username' aria-label="Username or E-mail address" placeholder="Username or E-mail address" value=""/><input size='30' type='password' name='flightaware_password' aria-label="Password" placeholder="Password" /></div><input type='hidden' name='token' value='130747645'><button id='loginButton' name='submit' type='submit' class='actionButton'>Login</button><div class="passwordReset"><a href="https://www.flightaware.com/account/forgot">Forgot password?</a></div><div class="register">Don't have an account? Register now (free) for customized features, flight alerts, and more!
 		<div class="registerButton"><a class="actionButton" href="/account/join/?referer=https://www.flightaware.com/live/flight/UNI133/history/20251130/1131Z/EDDK/GCXO/tracklog"> Join FlightAware</a></div></div></form></div></div></div></div><div class="dialogOverlay"></div>
 <div id="footer_padding"></div>
 <script type="text/javascript" src="https://www.flightaware.com/include/ac067c7a8f791-footer.js"   ></script>
@@ -7661,12 +7674,6 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
             </div>
             
         
-            
-            <div class="link-item">
-                <a href="https://industry.flightaware.com/usgovernment">GSA Contract # 47QTCA21D003F</a>
-            </div>
-            
-        
     
 </div>
 
@@ -7827,10 +7834,6 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
                 <a href="https://go.flightaware.com/webinars">Webinars</a>
             </div>
         
-            <div class="link-item">
-                <a href="https://industry.flightaware.com/usgovernment">GSA Contract # 47QTCA21D003F</a>
-            </div>
-        
     </div>
 
             
@@ -7899,189 +7902,189 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
     <div id="languages" class="languages">
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=ar_SA">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=ar_SA">
                     <img src="https://www.flightaware.com/images/countries/SA.png" alt="SA">
                     العربية
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=cs_CZ">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=cs_CZ">
                     <img src="https://www.flightaware.com/images/countries/CZ.png" alt="CZ">
                     Čeština
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=de_DE">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=de_DE">
                     <img src="https://www.flightaware.com/images/countries/DE.png" alt="DE">
                     Deutsch
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=en_AU">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=en_AU">
                     <img src="https://www.flightaware.com/images/countries/AU.png" alt="AU">
                     English (Australia)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=en_CA">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=en_CA">
                     <img src="https://www.flightaware.com/images/countries/CA.png" alt="CA">
                     English (Canada)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=en_GB">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=en_GB">
                     <img src="https://www.flightaware.com/images/countries/GB.png" alt="GB">
                     English (UK)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=en_US">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=en_US">
                     <img src="https://www.flightaware.com/images/countries/US.png" alt="US">
                     English (USA)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=es_ES">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=es_ES">
                     <img src="https://www.flightaware.com/images/countries/ES.png" alt="ES">
                     Español (España)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=es_MX">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=es_MX">
                     <img src="https://www.flightaware.com/images/countries/MX.png" alt="MX">
                     Español
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=fi_FI">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=fi_FI">
                     <img src="https://www.flightaware.com/images/countries/FI.png" alt="FI">
                     Suomi
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=fr_CA">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=fr_CA">
                     <img src="https://www.flightaware.com/images/countries/CA.png" alt="CA">
                     Français (Canada)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=fr_FR">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=fr_FR">
                     <img src="https://www.flightaware.com/images/countries/FR.png" alt="FR">
                     Français (France)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=he_IL">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=he_IL">
                     <img src="https://www.flightaware.com/images/countries/IL.png" alt="IL">
                     עִבְרִית
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=he_IN">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=he_IN">
                     <img src="https://www.flightaware.com/images/countries/IN.png" alt="IN">
                     हिन्दी
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=hr_HR">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=hr_HR">
                     <img src="https://www.flightaware.com/images/countries/HR.png" alt="HR">
                     Hrvatski
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=it_IT">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=it_IT">
                     <img src="https://www.flightaware.com/images/countries/IT.png" alt="IT">
                     Italiano
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=it_IT">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=it_IT">
                     <img src="https://www.flightaware.com/images/countries/IT.png" alt="IT">
                     Italiano
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=ja_JP">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=ja_JP">
                     <img src="https://www.flightaware.com/images/countries/JP.png" alt="JP">
                     日本語
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=ko_KR">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=ko_KR">
                     <img src="https://www.flightaware.com/images/countries/KR.png" alt="KR">
                     한국어
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=pl_PL">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=pl_PL">
                     <img src="https://www.flightaware.com/images/countries/PL.png" alt="PL">
                     Polski
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=pt_BR">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=pt_BR">
                     <img src="https://www.flightaware.com/images/countries/BR.png" alt="BR">
                     Português (Brasil)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=pt_PT">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=pt_PT">
                     <img src="https://www.flightaware.com/images/countries/PT.png" alt="PT">
                     Português (Portugal)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=ru_RU">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=ru_RU">
                     <img src="https://www.flightaware.com/images/countries/RU.png" alt="RU">
                     Русский
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=tr_TR">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=tr_TR">
                     <img src="https://www.flightaware.com/images/countries/TR.png" alt="TR">
                     Türkçe
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=zh_CN">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=zh_CN">
                     <img src="https://www.flightaware.com/images/countries/CN.png" alt="CN">
                     中文(简体)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=zh_HK">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=zh_HK">
                     <img src="https://www.flightaware.com/images/countries/HK.png" alt="HK">
                     中文(香港)
                 </a>
             </div>
         
             <div>
-                <a href="/account/locale_switch.rvt?csrf_token=371631730&locale=zh_TW">
+                <a href="/account/locale_switch.rvt?csrf_token=130747645&locale=zh_TW">
                     <img src="https://www.flightaware.com/images/countries/TW.png" alt="TW">
                     中文(台灣)
                 </a>
@@ -8091,7 +8094,7 @@ altitude_json = [[1764483987000,975],[1764484003000,1850],[1764484019000,2600],[
 </div>
     </div>
     <div class="copyright mr-10 mt-5 footer-bottom-trigger">
-        <i class="fa fa-copyright"></i> 2025 FlightAware
+        <i class="fa fa-copyright"></i> 2026 FlightAware
     </div>
     <div class="terms mr-10 mt-5">
         <a href="/about/terms-of-use/">Terms of Use</a>
