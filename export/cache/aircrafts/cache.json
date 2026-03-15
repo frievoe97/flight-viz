@@ -1,8 +1,8 @@
 {
-  "https://www.flightaware.com/live/flight/UNI133": "./export/cache/aircrafts/live_flight_UNI133.html",
-  "https://www.flightaware.com/live/flight/UNI135": "./export/cache/aircrafts/live_flight_UNI135.html",
-  "https://www.flightaware.com/live/flight/UNI132": "./export/cache/aircrafts/live_flight_UNI132.html",
-  "https://www.flightaware.com/live/flight/UNI134": "./export/cache/aircrafts/live_flight_UNI134.html",
+  "https://www.flightaware.com/live/flight/UNI133": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/aircrafts/live_flight_UNI133.html",
+  "https://www.flightaware.com/live/flight/UNI135": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/aircrafts/live_flight_UNI135.html",
+  "https://www.flightaware.com/live/flight/UNI132": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/aircrafts/live_flight_UNI132.html",
+  "https://www.flightaware.com/live/flight/UNI134": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/aircrafts/live_flight_UNI134.html",
   "https://www.flightaware.com/live/flight/DAL107": "/home/runner/work/flight-viz/flight-viz/export/cache/aircrafts/live_flight_DAL107.html",
   "https://www.flightaware.com/live/flight/DLH400": "/Users/friedrichvolkers/GIT/flight_viz/export/cache/aircrafts/live_flight_DLH400.html",
   "https://www.flightaware.com/live/flight/UNI131": "/home/runner/work/flight-viz/flight-viz/export/cache/aircrafts/live_flight_UNI131.html",
