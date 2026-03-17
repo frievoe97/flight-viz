@@ -28,9 +28,9 @@
   "https://www.flightaware.com/live/flight/DCAAE/history/20251125/1448Z/VTSP/VOHS/tracklog": "/home/runner/work/flight-viz/flight-viz/export/cache/flights/live_flight_DCAAE_history_20251125_1448Z_VTSP_VOHS_tracklog.html",
   "https://www.flightaware.com/live/flight/DCAAE/history/20251125/1833Z/VOHS/OMSJ/tracklog": "/home/runner/work/flight-viz/flight-viz/export/cache/flights/live_flight_DCAAE_history_20251125_1833Z_VOHS_OMSJ_tracklog.html",
   "https://www.flightaware.com/live/flight/UNI133/history/20251130/1131Z/EDDK/GCXO/tracklog": "/home/runner/work/flight-viz/flight-viz/export/cache/flights/live_flight_UNI133_history_20251130_1131Z_EDDK_GCXO_tracklog.html",
-  "https://www.flightaware.com/live/flight/UNI133/history/20251201/1051Z/GCXO/EGKB/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_UNI133_history_20251201_1051Z_GCXO_EGKB_tracklog.html",
-  "https://www.flightaware.com/live/flight/UNI133/history/20251201/1851Z/EGKB/EDDK/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_UNI133_history_20251201_1851Z_EGKB_EDDK_tracklog.html",
-  "https://www.flightaware.com/live/flight/UNI137/history/20251204/0906Z/LCPH/LDDU/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_UNI137_history_20251204_0906Z_LCPH_LDDU_tracklog.html",
+  "https://www.flightaware.com/live/flight/UNI133/history/20251201/1051Z/GCXO/EGKB/tracklog": "/home/runner/work/flight-viz/flight-viz/export/cache/flights/live_flight_UNI133_history_20251201_1051Z_GCXO_EGKB_tracklog.html",
+  "https://www.flightaware.com/live/flight/UNI133/history/20251201/1851Z/EGKB/EDDK/tracklog": "/home/runner/work/flight-viz/flight-viz/export/cache/flights/live_flight_UNI133_history_20251201_1851Z_EGKB_EDDK_tracklog.html",
+  "https://www.flightaware.com/live/flight/UNI137/history/20251204/0906Z/LCPH/LDDU/tracklog": "/home/runner/work/flight-viz/flight-viz/export/cache/flights/live_flight_UNI137_history_20251204_0906Z_LCPH_LDDU_tracklog.html",
   "https://www.flightaware.com/live/flight/UNI137/history/20251204/1733Z/EGCC/EDDK/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_UNI137_history_20251204_1733Z_EGCC_EDDK_tracklog.html",
   "https://www.flightaware.com/live/flight/DCUNI/history/20251207/0605Z/EDDK/LEVC/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_DCUNI_history_20251207_0605Z_EDDK_LEVC_tracklog.html",
   "https://www.flightaware.com/live/flight/DCUNI/history/20251207/1126Z/LEVC/EDDL/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_DCUNI_history_20251207_1126Z_LEVC_EDDL_tracklog.html",
@@ -42,6 +42,6 @@
   "https://www.flightaware.com/live/flight/UNI137/history/20251209/1620Z/LEVD/EDLW/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_UNI137_history_20251209_1620Z_LEVD_EDLW_tracklog.html",
   "https://www.flightaware.com/live/flight/UNI137/history/20251210/0947Z/EDLW/LEAL/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_UNI137_history_20251210_0947Z_EDLW_LEAL_tracklog.html",
   "https://www.flightaware.com/live/flight/UNI137/history/20251211/0905Z/EGBB/EDDK/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_UNI137_history_20251211_0905Z_EGBB_EDDK_tracklog.html",
-  "https://www.flightaware.com/live/flight/UNI137/history/20251203/1210Z/EDDK/LCPH/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_UNI137_history_20251203_1210Z_EDDK_LCPH_tracklog.html",
-  "https://www.flightaware.com/live/flight/UNI137/history/20251204/1213Z/LDDU/EGCC/tracklog": "/Users/friedrichvolkers/GIT/flight-viz/export/cache/flights/live_flight_UNI137_history_20251204_1213Z_LDDU_EGCC_tracklog.html"
+  "https://www.flightaware.com/live/flight/UNI137/history/20251203/1210Z/EDDK/LCPH/tracklog": "/home/runner/work/flight-viz/flight-viz/export/cache/flights/live_flight_UNI137_history_20251203_1210Z_EDDK_LCPH_tracklog.html",
+  "https://www.flightaware.com/live/flight/UNI137/history/20251204/1213Z/LDDU/EGCC/tracklog": "/home/runner/work/flight-viz/flight-viz/export/cache/flights/live_flight_UNI137_history_20251204_1213Z_LDDU_EGCC_tracklog.html"
 }
